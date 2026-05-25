@@ -4,3 +4,4 @@ layers/
 meta/
 .vscode/
 sstate-cache/
+deploy/
