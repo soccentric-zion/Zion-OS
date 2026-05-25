@@ -1,0 +1,5 @@
+# 80-kr260-connectivity.preset
+# Enable systemd-networkd and systemd-resolved for GigE connectivity.
+# KR260 has no on-board WiFi or Bluetooth; those services are not needed.
+enable systemd-networkd.service
+enable systemd-resolved.service

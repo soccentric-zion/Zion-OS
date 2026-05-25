@@ -1,7 +1,0 @@
-# VLAN 10 on WiFi (wlan*)
-[NetDev]
-Name=wlan-vlan10
-Kind=vlan
-
-[VLAN]
-Id=10

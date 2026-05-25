@@ -1,0 +1,26 @@
+# sdimage-zynqmp.wks — SD card image layout for KR260 / ZynqMP
+#
+# Partition layout:
+#   p1  /boot       FAT32   256 MiB  — BOOT.BIN, Image, DTB
+#   p2  rootfs-a    ext4    8 GiB    — A-slot root filesystem
+#   p3  rootfs-b    ext4    8 GiB    — B-slot root filesystem (blank at first flash)
+#   p4  /home       ext4    512 MiB  — Persistent home; expanded on first boot
+#                                      by kr260-home-init.service
+#
+# Notes:
+#   • The KR260 microSD is typically /dev/mmcblk1; internal eMMC is mmcblk0.
+#   • BOOT.BIN wraps FSBL + PMU firmware + TF-A + U-Boot.
+#   • U-Boot A/B slot selection is done via fw_setenv (libubootenv-bin).
+#   • SWUpdate updates p2 or p3 in-place; pre/post-install.sh manage the slot.
+
+part /boot --source bootimg-partition --ondisk mmcblk1 --fstype=vfat \
+    --label boot --active --align 4 --size 256
+
+part / --source rootfs --ondisk mmcblk1 --fstype=ext4 \
+    --label rootfs-a --align 4 --size 8192
+
+part --ondisk mmcblk1 --fstype=ext4 \
+    --label rootfs-b --align 4 --size 8192
+
+part /home --ondisk mmcblk1 --fstype=ext4 \
+    --label home --align 4 --size 512

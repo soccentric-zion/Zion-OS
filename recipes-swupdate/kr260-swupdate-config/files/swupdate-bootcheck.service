@@ -1,0 +1,15 @@
+[Unit]
+Description=SWUpdate boot health check — confirm A/B slot after upgrade
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/kr260-swupdate/swupdate-bootcheck.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=sysinit.target

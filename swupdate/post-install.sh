@@ -1,31 +1,28 @@
 #!/bin/bash
-# SWUpdate post-install script ─ included in every .swu package
+# SWUpdate post-install script — included in every .swu package
 #
-# Updates /boot/cmdline.txt so that the RPi firmware boots the newly
-# written slot on the next reboot.  The boot partition is remounted
-# read-write for the edit, then restored to read-only.
+# Activates the newly written A/B slot by updating U-Boot environment
+# variables via fw_setenv (libubootenv-bin).  On the next reboot U-Boot
+# reads bootslot and boots from the appropriate partition.
+#
+# After a successful boot, swupdate-bootcheck.service confirms the upgrade
+# by calling fw_setenv upgrade_available 0.
 
 set -euo pipefail
+
+log() { echo "[swupdate post-install] $*" >&2; }
 
 TARGET_SLOT=$(cat /run/swupdate-target-slot)
 TARGET_DEV=$(cat  /run/swupdate-target-dev)
 
-echo "[swupdate post-install] activating slot ${TARGET_SLOT} (${TARGET_DEV})"
+log "Activating slot ${TARGET_SLOT} (${TARGET_DEV})"
 
-# ── Resolve the PARTUUID of the target partition ──────────────────────────────
-TARGET_PARTUUID=$(blkid -s PARTUUID -o value "${TARGET_DEV}")
-if [[ -z "${TARGET_PARTUUID}" ]]; then
-    echo "[swupdate post-install] ERROR: cannot read PARTUUID from ${TARGET_DEV}" >&2
-    exit 1
-fi
+# ── Update U-Boot environment to boot from new slot ──────────────────────────
+fw_setenv bootslot          "${TARGET_SLOT}"
+fw_setenv upgrade_available 1
+fw_setenv bootcount         0
 
-# ── Toggle root= in /boot/cmdline.txt ────────────────────────────────────────
-mount -o remount,rw /boot
-sed -i "s|root=PARTUUID=[a-fA-F0-9-]*|root=PARTUUID=${TARGET_PARTUUID}|" \
-    /boot/cmdline.txt
-mount -o remount,ro /boot
-
-echo "[swupdate post-install] cmdline.txt → root=PARTUUID=${TARGET_PARTUUID}"
+log "U-Boot env: bootslot=${TARGET_SLOT} upgrade_available=1 bootcount=0"
 
 # ── Clean up temporary files and symlink ─────────────────────────────────────
 rm -f /dev/swupdate-inactive \

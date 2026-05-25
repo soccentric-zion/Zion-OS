@@ -1,0 +1,16 @@
+[Unit]
+Description=KR260 home partition initialisation
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+ConditionPathExists=!/home/.home-initialised
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/kr260-home-init/kr260-home-init.sh
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=sysinit.target

@@ -4,19 +4,21 @@ software =
         hardware- compatibility =["1.0"];
 
 /*
- * Raspberry Pi 5 — A/B rootfs OTA update
+ * KR260 — A/B rootfs OTA update
  *
  * Workflow:
- *   1. pre-install.sh  identifies the inactive slot (p2 or p3) and
- *      creates the /dev/swupdate-inactive symlink.
+ *   1. pre-install.sh  identifies the inactive slot using partition labels
+ *      (rootfs-a / rootfs-b) and creates /dev/swupdate-inactive symlink.
  *   2. The "raw" handler streams rootfs.ext4.gz onto that device.
- *   3. post-install.sh updates /boot/cmdline.txt so the new slot
- *      is selected on the next reboot, then cleans up temp files.
+ *   3. post-install.sh calls fw_setenv to set bootslot=<new> and
+ *      upgrade_available=1 so U-Boot boots the new slot on next reboot.
  *   4. SWUpdate triggers `reboot` via postupdatecmd in swupdate.cfg.
+ *   5. On next boot swupdate-bootcheck.service sets upgrade_available=0
+ *      to confirm the upgrade (prevents U-Boot rollback).
  *
  * To deliver the update:
  *   • Web UI  : http://<device-ip>:8080  (drag-and-drop .swu)
- *   • CLI push: swupdate-client -v <device-ip> rpi5-<version>.swu
+ *   • CLI push: swupdate-client -v <device-ip> zion-<version>.swu
  */
 
 images: (
