@@ -1,0 +1,11 @@
+header:
+  version: 14
+  includes:
+    - ../common.yaml
+
+machine: k26-smk-kr-sdt
+
+local_conf_header:
+  wks: |
+    # A/B OTA partition layout for Zynq UltraScale+ (see meta-zion/wic/sdimage-zynqmp.wks)
+    WKS_FILE = "sdimage-zynqmp.wks"
