@@ -150,13 +150,12 @@ sdk-image: ensure-image kas-container-script
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk $(IMAGE_TARGET)"
 	@echo ""
 	@echo "[2/4] Staging SDK installer into docker/sdk/ ..."
-	$(eval _SDK_SH := $(shell find $(BUILD_DIR)/tmp/deploy/sdk -maxdepth 1 \
-	    -name '*.sh' ! -name '*-ext-*' 2>/dev/null | sort -V | tail -1))
-	@test -n "$(_SDK_SH)" || \
-	    { echo "ERROR: SDK installer (.sh) not found in $(BUILD_DIR)/tmp/deploy/sdk"; exit 1; }
-	@echo "  Source : $(_SDK_SH)"
-	@echo "  Dest   : docker/sdk/sdk.sh"
-	@cp "$(_SDK_SH)" docker/sdk/sdk.sh && chmod +x docker/sdk/sdk.sh
+	@_SDK_SH="$$(find $(BUILD_DIR)/tmp/deploy/sdk -maxdepth 1 \
+	    -name '*.sh' ! -name '*-ext-*' 2>/dev/null | sort -V | tail -1)"; \
+	 test -n "$$_SDK_SH" || { echo "ERROR: SDK installer (.sh) not found in $(BUILD_DIR)/tmp/deploy/sdk"; exit 1; }; \
+	 echo "  Source : $$_SDK_SH"; \
+	 echo "  Dest   : docker/sdk/sdk.sh"; \
+	 cp "$$_SDK_SH" docker/sdk/sdk.sh && chmod +x docker/sdk/sdk.sh
 	@echo ""
 	@echo "[3/4] Building SDK Docker image $(SDK_IMAGE) ..."
 	$(MAKE) -C docker/sdk \
@@ -189,13 +188,12 @@ esdk-image: ensure-image kas-container-script
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk_ext $(IMAGE_TARGET)"
 	@echo ""
 	@echo "[2/4] Staging eSDK installer into docker/esdk/ ..."
-	$(eval _ESDK_SH := $(shell find $(BUILD_DIR)/tmp/deploy/sdk -maxdepth 1 \
-	    -name '*-ext-*.sh' 2>/dev/null | sort -V | tail -1))
-	@test -n "$(_ESDK_SH)" || \
-	    { echo "ERROR: eSDK installer (*-ext-*.sh) not found in $(BUILD_DIR)/tmp/deploy/sdk"; exit 1; }
-	@echo "  Source : $(_ESDK_SH)"
-	@echo "  Dest   : docker/esdk/esdk.sh"
-	@cp "$(_ESDK_SH)" docker/esdk/esdk.sh && chmod +x docker/esdk/esdk.sh
+	@_ESDK_SH="$$(find $(BUILD_DIR)/tmp/deploy/sdk -maxdepth 1 \
+	    -name '*-ext-*.sh' 2>/dev/null | sort -V | tail -1)"; \
+	 test -n "$$_ESDK_SH" || { echo "ERROR: eSDK installer (*-ext-*.sh) not found in $(BUILD_DIR)/tmp/deploy/sdk"; exit 1; }; \
+	 echo "  Source : $$_ESDK_SH"; \
+	 echo "  Dest   : docker/esdk/esdk.sh"; \
+	 cp "$$_ESDK_SH" docker/esdk/esdk.sh && chmod +x docker/esdk/esdk.sh
 	@echo ""
 	@echo "[3/4] Building eSDK Docker image $(ESDK_IMAGE) ..."
 	$(MAKE) -C docker/esdk \

@@ -54,3 +54,8 @@ deploy/
 meta/*
 !meta/meta-zion/
 !meta/meta-zion/**
+
+# Host SSH keys used to fetch the private HAL repo during eSDK Docker build
+docker/esdk/ssh/
+
+sstate/

@@ -8,12 +8,13 @@ LICENSE = "CLOSED"
 LIC_FILES_CHKSUM = "file://security.md;md5=1606e3c70e7eb33ddfd7fa686c3b5ff0"
 
 SRC_URI = " \
-    git://github.com/SiliconCentric/Zion-HAL.git;protocol=ssh;user=git;branch=master \
+    git://github.com/SiliconCentric/Zion-HAL.git;protocol=ssh;user=git;branch=develop \
     file://security.md \
 "
-SRCREV = "${AUTOREV}"
+SRCREV = "a2acd66da1963d4166f2be6eb3ddec63d1ed9845"
 
 PV = "1.0+git${SRCPV}"
+# zion's pinned poky has no UNPACKDIR (older walnascar), so S stays under WORKDIR.
 S = "${WORKDIR}/git"
 
 inherit cmake
@@ -21,7 +22,17 @@ inherit cmake
 DEPENDS = "protobuf protobuf-native grpc grpc-native abseil-cpp pkgconfig-native"
 
 OECMAKE_SOURCEPATH = "${S}"
+# Force gRPC to be found via pkg-config rather than its CMake config: the gRPC
+# config re-includes protobuf's config, which conflicts with the protobuf
+# already found (protobuf 5.x libupb target mismatch) and breaks configure.
 OECMAKE_EXTRA_OECMAKE = "-DGRPC_CPP_PLUGIN=${STAGING_BINDIR_NATIVE}/grpc_cpp_plugin"
+
+do_configure:prepend() {
+    # Skip the gRPC CMake config (which re-includes protobuf and breaks) and
+    # always use the pkg-config fallback.
+    sed -i -e 's/find_package(gRPC CONFIG QUIET)/set(gRPC_FOUND FALSE)/' \
+           -e 's/if(gRPC_FOUND)/if(FALSE)/' ${S}/protos/CMakeLists.txt
+}
 
 CXXFLAGS:append = " -Wno-error=unused-result"
 LDFLAGS:append = " -Wl,--copy-dt-needed-entries"
