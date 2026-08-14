@@ -65,7 +65,7 @@ Partition table (`meta/meta-zion/wic/sdimage-zynqmp.wks`):
 | `meta-xilinx-tools` | Xilinx/meta-xilinx-tools (rel-v2025.2) | bootgen, XSCT, Vitis           |
 | `meta-kria`         | Xilinx/meta-kria (rel-v2025.2)    | Kria SOM + KR260 machine configs     |
 | `meta-swupdate`     | sbabic/meta-swupdate (scarthgap)  | swupdate OTA framework               |
-| `meta-zion`         | SiliconCentric/meta-zion (local, in `meta/`) | Zion image, HAL, swu config |
+| `meta-zion`         | soccentric-zion/meta-zion (local, in `meta/`) | Zion image, HAL, swu config |
 
 ## Repo Notes
 

@@ -1,6 +1,6 @@
 # Zion-OS
 
-**Remote:** `git@github.com:SiliconCentric/Zion-OS.git`
+**Remote:** `git@github.com:soccentric-zion/Zion-OS.git`
 **Parent project:** [Zion](../Zion.md) (target hardware: **AMD Xilinx Zynq UltraScale+ MPSoC**, default board **KR260** / Kria KR260 Robotics Starter Kit.)
 **Leaf type:** `<Project>-OS`
 **Status:** REAL — actively built out

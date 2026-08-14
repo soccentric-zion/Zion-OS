@@ -95,7 +95,7 @@ Downloaded automatically on first build. Requires `curl` and Docker.
 
 ```bash
 # 1. Clone
-git clone git@github.com:SiliconCentric/Zion-OS.git
+git clone git@github.com:soccentric-zion/Zion-OS.git
 cd Zion-OS
 
 # 2. Build the KAS Docker image (once)
@@ -259,7 +259,7 @@ against the exact sysroot the image was built with.
 | `meta-xilinx-tools` | Xilinx/meta-xilinx-tools (rel-v2025.2)    | bootgen, XSCT, Vitis integration     |
 | `meta-kria`         | Xilinx/meta-kria (rel-v2025.2)            | Kria SOM + KR260 machine configs     |
 | `meta-swupdate`     | sbabic/meta-swupdate (scarthgap)          | swupdate OTA framework               |
-| `meta-zion`         | SiliconCentric/meta-zion (rel-v2025.2)    | Zion image, HAL, Client, swu config  |
+| `meta-zion`         | soccentric-zion/meta-zion (rel-v2025.2)    | Zion image, HAL, Client, swu config  |
 
 ---
 
