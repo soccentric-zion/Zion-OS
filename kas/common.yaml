@@ -40,3 +40,8 @@ local_conf_header:
 
     # SWUpdate init integration
     SWUPDATE_INIT = "systemd"
+
+    # Allow the Xilinx embeddedsw-source fetch to run during the extensible
+    # SDK build (its do_fetch sstate is not always present, which otherwise
+    # trips bitbake's BB_SETSCENE_ENFORCE check).
+    BB_SETSCENE_ENFORCE_IGNORE_TASKS = "embeddedsw-source*:do_fetch"

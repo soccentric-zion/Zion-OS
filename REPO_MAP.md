@@ -10,8 +10,9 @@ Built with `kas` + Docker against the Xilinx `rel-v2025.2` layer set, with A/B
 OTA updates via `swupdate`.
 
 **Board:** default `kr260` (positional arg to `make build`). All platform
-customization lives in `meta/meta-zion` (committed locally); upstream layers
-(`poky`, `meta-openembedded`, `meta-xilinx`, `meta-xilinx-tools`, `meta-kria`,
+customization lives in `meta/meta-zion`, a nested clone of its own upstream
+`soccentric-zion/meta-zion` (fetched by kas); upstream layers (`poky`,
+`meta-openembedded`, `meta-xilinx`, `meta-xilinx-tools`, `meta-kria`,
 `meta-swupdate`) are checked out by kas into a **gitignored** `layers/`
 directory and must never be hand-edited or tracked.
 
@@ -31,9 +32,8 @@ SD/QSPI → FSBL → PMU Firmware → ATF (TF-A) → U-Boot → Linux → system
 **A/B OTA layout:** `boot` (FAT32, BOOT.BIN + Image + DTB), `rootfs-a`,
 `rootfs-b` (ext4, switched by swupdate), `data` (`/home`, persistent).
 
-**Local layer:** `meta/meta-zion` is committed in-repo (see `.gitignore`),
-matching the Acadia/Arches convention where the product layer is tracked
-locally while upstream layers are fetched by kas.
+**Local layer:** `meta/meta-zion` is a nested clone with its own upstream
+at `soccentric-zion/meta-zion.git` (see `.gitignore`).
 
 ---
 Part of the `Zion` project in the `project-managers` fleet. See

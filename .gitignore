@@ -47,13 +47,10 @@ Thumbs.db
 
 deploy/
 
-# meta/ holds the meta-zion Yocto layer, which historically was
-# committed to this repo before the layer-fetch was wired through
-# kas/repos/. Re-enable tracking here so layer fixes (e.g. the A/B
-# OTA rollback chain) can be reviewed and merged via PR.
+# meta/ holds the meta-zion Yocto layer, now fetched by kas from its own
+# upstream (soccentric-zion/meta-zion) and checked out here as a nested
+# clone — never tracked in this repo.
 meta/*
-!meta/meta-zion/
-!meta/meta-zion/**
 
 # Host SSH keys used to fetch the private HAL repo during eSDK Docker build
 docker/esdk/ssh/
