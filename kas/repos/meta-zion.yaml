@@ -8,4 +8,4 @@ repos:
     # TODO: pin to a specific commit — run scripts/pin-layers.sh
     path: meta/meta-zion
     layers:
-      .:
+      meta/meta-zion:
