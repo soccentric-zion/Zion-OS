@@ -40,6 +40,10 @@ Use `make flash kr260 DEVICE=/dev/sdX` only after independently identifying the 
 ## Limitations
 
 No Yocto build, signed update, SD flash, KR260 boot, A/B rollback, recovery, or SDK consumer build was manually verified. Board support beyond the documented KR260 target remains unconfirmed.
+
+## Detailed Reference
+
+The retained Yocto guide below contains the repository's extended architecture, board, build, update, and flashing notes.
 # Zion-OS
 
 Yocto-based embedded Linux OS for the AMD Xilinx Zynq UltraScale+ MPSoC platform.
