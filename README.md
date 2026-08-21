@@ -1,5 +1,47 @@
 # Zion-OS
 
+## Project Summary
+
+Preserve downloads and sstate caches when comparing build reproducibility across hosts.
+
+Image metadata, layer pins, and scripts can be reviewed offline, but bootloader behavior, partition selection, update recovery, and hardware peripherals all require a target board and a deliberately staged test image.
+
+Zion-OS is a Yocto-based embedded Linux distribution for AMD Xilinx Zynq UltraScale+ MPSoC hardware. The repository uses kas configurations and a Docker build environment to assemble a board image, SDK/eSDK artifacts, and a swupdate package. Its documented default target is the KR260 Robotics Starter Kit, represented by `kas/boards/kr260.yaml`; shared settings live in `kas/common.yaml`, while repository pins select the Xilinx `rel-v2025.2` layer set. The custom meta layer supplies Zion image, HAL, Client, and update integration. The documented boot path runs from SD/QSPI through FSBL, firmware, ATF, U-Boot, Linux, systemd, Zion-HAL, and Zion-Client. The image layout describes boot, rootfs A/B, and persistent data partitions, with swupdate updating the inactive root filesystem and a health-check service confirming a successful boot. The Makefile provides image, rebuild, SDK, eSDK, shell, swu, flash, kas-image, clean, and Docker-image workflows. The repository also contains build/cache directories, so a clean reproducible build may require deliberate cache handling and substantial disk space. This README retains the operational guidance but treats build outputs, signing, flashing, boot, rollback, and recovery as unverified until exercised on a KR260 or actual Zion board. The table distinguishes source-controlled configuration from hardware-dependent behavior and names commands that can provide evidence. Cross-compiling Zion-HAL and Zion-Client against the generated SDK is an intended integration path, not a claim that those sibling builds currently pass together.
+
+## Feature Status
+
+| # | Name / Description | Implemented? | Test Coverage? | Manual Test |
+|---:|---|---|---|---|
+| 1 | kas workspace and pinned Yocto layer set | Implemented | Parse/build not run | [ ] Manual verification required |
+| 2 | KR260 machine configuration | Implemented | Image build not verified | [ ] Manual verification required |
+| 3 | Dockerized kas build environment | Implemented | Container build not verified | [ ] Manual verification required |
+| 4 | Bootable SD/QSPI image generation | Partial | Build evidence not run | [ ] Manual verification required |
+| 5 | Zion custom Yocto layer integration | Implemented | BitBake validation unknown | [ ] Manual verification required |
+| 6 | A/B rootfs partition layout | Implemented | Target boot/rollback unverified | [ ] Manual verification required |
+| 7 | swupdate `.swu` package generation | Implemented | `make swu` not run | [ ] Manual verification required |
+| 8 | Update signing key workflow | Partial | Key/signature verification unknown | [ ] Manual verification required |
+| 9 | Health-check slot confirmation | Partial | Device boot test absent | [ ] Manual verification required |
+| 10 | SDK and eSDK generation | Implemented | Toolchain build not run | [ ] Manual verification required |
+| 11 | SD flashing with bmaptool | Implemented | Destructive flash not performed | [ ] Manual verification required |
+| 12 | KR260 boot and recovery procedure | Documented | No physical test | [ ] Manual verification required |
+
+## Tests and Commands
+
+```bash
+make kas-image
+make image kr260
+make swu
+make sdk kr260
+make esdk kr260
+```
+
+Use `make flash kr260 DEVICE=/dev/sdX` only after independently identifying the target device.
+
+## Limitations
+
+No Yocto build, signed update, SD flash, KR260 boot, A/B rollback, recovery, or SDK consumer build was manually verified. Board support beyond the documented KR260 target remains unconfirmed.
+# Zion-OS
+
 Yocto-based embedded Linux OS for the AMD Xilinx Zynq UltraScale+ MPSoC platform.
 Default target board: **KR260** (Kria KR260 Robotics Starter Kit).
 
