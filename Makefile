@@ -3,6 +3,8 @@
 # =============================================================================
 
 # --- Image names -------------------------------------------------------------
+.DEFAULT_GOAL := help
+
 KAS_IMAGE        ?= zion-kas:latest
 SDK_IMAGE        ?= zion-sdk:latest
 ESDK_IMAGE       ?= zion-esdk:latest
@@ -117,21 +119,21 @@ kas-container-script:
 # -----------------------------------------------------------------------------
 
 ## Build (or rebuild) the KAS Yocto build container (docker/yocto/)
-kas-image:
+kas-image: ## Build/rebuild KAS build container  (docker/yocto/)
 	$(MAKE) -C docker/yocto \
 	    IMAGE_NAME=$(_KAS_IMAGE_NAME) \
 	    IMAGE_TAG=$(_KAS_IMAGE_TAG) \
 	    KAS_VERSION=$(KAS_VERSION)
 
 ## Build the KAS image only when it is absent (used internally by build/shell/sdk/esdk)
-ensure-image:
+ensure-image: ## Build KAS image only when absent
 	@docker image inspect $(KAS_IMAGE) >/dev/null 2>&1 \
 	    || { echo "KAS image $(KAS_IMAGE) not found — building ..."; \
 	         $(MAKE) kas-image; }
 
 ## Build the Yocto SD card image for BOARD — alias for build
 ## Usage: make image rpi5
-image: build
+image: build ## Build Yocto SD card image for BOARD  (alias for build)
 
 ## Full chain: Yocto SDK build → stage installer → docker build → deploy
 ##   Step 1  ensure the KAS build container is present
@@ -139,7 +141,7 @@ image: build
 ##   Step 3  locate and stage the SDK installer into docker/sdk/sdk.sh
 ##   Step 4  build the SDK Docker image
 ##   Step 5  deploy SDK artifacts to deploy/sdk/BOARD_TS/
-sdk-image: ensure-image kas-container-script
+sdk-image: ensure-image kas-container-script ## Full chain: SDK build → stage → docker build → deploy
 	@echo ""
 	@echo "======================================================================"
 	@echo " sdk-image: building Yocto SDK + Docker image for $(SDK_IMAGE)"
@@ -177,7 +179,7 @@ sdk-image: ensure-image kas-container-script
 ##   Step 3  locate and stage the eSDK installer into docker/esdk/esdk.sh
 ##   Step 4  build the eSDK Docker image
 ##   Step 5  deploy eSDK artifacts to deploy/esdk/BOARD_TS/
-esdk-image: ensure-image kas-container-script
+esdk-image: ensure-image kas-container-script ## Full chain: eSDK build → stage → docker build → deploy
 	@echo ""
 	@echo "======================================================================"
 	@echo " esdk-image: building Yocto eSDK + Docker image for $(ESDK_IMAGE)"
@@ -210,13 +212,13 @@ esdk-image: ensure-image kas-container-script
 	@echo ""
 
 ## Build the SDK Docker image only when it is absent
-ensure-sdk-image:
+ensure-sdk-image: ## Run sdk-image chain only when image is absent
 	@docker image inspect $(SDK_IMAGE) >/dev/null 2>&1 \
 	    || { echo "SDK image $(SDK_IMAGE) not found — running full sdk-image chain ..."; \
 	         $(MAKE) sdk-image; }
 
 ## Build the eSDK Docker image only when it is absent
-ensure-esdk-image:
+ensure-esdk-image: ## Run esdk-image chain only when image is absent
 	@docker image inspect $(ESDK_IMAGE) >/dev/null 2>&1 \
 	    || { echo "eSDK image $(ESDK_IMAGE) not found — running full esdk-image chain ..."; \
 	         $(MAKE) esdk-image; }
@@ -226,38 +228,38 @@ ensure-esdk-image:
 # -----------------------------------------------------------------------------
 
 ## Build the Yocto image for the selected BOARD (default target)
-build: ensure-image kas-container-script
+build: ensure-image kas-container-script ## Build Yocto SD card image for BOARD
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) build $(KAS_CONFIG)
 	@$(MAKE) --no-print-directory deploy-images DEPLOY_TS=$(DEPLOY_TS)
 
 ## Clean sstate for the image recipe then rebuild (use after adding packages)
-rebuild-image: ensure-image kas-container-script
+rebuild-image: ensure-image kas-container-script ## cleansstate image recipe, then rebuild
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c cleansstate $(IMAGE_TARGET)"
 	$(KAS_RUN) build $(KAS_CONFIG)
 	@$(MAKE) --no-print-directory deploy-images DEPLOY_TS=$(DEPLOY_TS)
 
 ## Interactive shell inside the KAS build container
-shell: ensure-image kas-container-script
+shell: ensure-image kas-container-script ## Interactive kas shell in the build container
 	$(KAS_RUN) shell $(KAS_CONFIG)
 
 ## Build the cross-toolchain SDK installer and deploy it (no Docker image)
 ## Use 'make sdk-image' to also build the SDK Docker image.
-sdk: ensure-image kas-container-script
+sdk: ensure-image kas-container-script ## Build cross-toolchain SDK → deploy/sdk/
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk $(IMAGE_TARGET)"
 	@$(MAKE) --no-print-directory deploy-sdk DEPLOY_TS=$(DEPLOY_TS)
 
 ## Build the extensible SDK installer and deploy it (no Docker image)
 ## Use 'make esdk-image' to also build the eSDK Docker image.
-esdk: ensure-image kas-container-script
+esdk: ensure-image kas-container-script ## Build extensible SDK     → deploy/esdk/
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk_ext $(IMAGE_TARGET)"
 	@$(MAKE) --no-print-directory deploy-esdk DEPLOY_TS=$(DEPLOY_TS)
 
 ## Build a .swu OTA update package from the latest rootfs.ext4 image
 ## Usage: make swu   or   make swu SWU_VERSION=1.2.3
-swu: build
+swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 	$(eval ROOTFS := $(shell find $(BUILD_DIR)/tmp/deploy/images/$(MACHINE) \
 	    -name "zion-image-$(MACHINE)*.rootfs.ext4" \
 	    -o -name "core-image-full-cmdline-$(MACHINE)*.rootfs.ext4" 2>/dev/null \
@@ -311,7 +313,7 @@ swu: build
 
 
 ## Flash to SD card.  Usage: make flash kr260 DEVICE=/dev/sdX
-flash:
+flash: ## Flash SD card  (requires DEVICE=/dev/sdX)
 ifndef DEVICE
 	$(error DEVICE is not set — example: make flash DEVICE=/dev/sdb)
 endif
@@ -329,7 +331,7 @@ endif
 # -----------------------------------------------------------------------------
 
 ## Copy .wic SD card images → deploy/images/BOARD_TS/
-deploy-images:
+deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/
 	@src="$(BUILD_DIR)/tmp/deploy/images/$(MACHINE)"; \
 	 out="$(DEPLOY_DIR)/images/$(BOARD)_$(DEPLOY_TS)"; \
 	 test -d "$$src" || { echo "ERROR: No image artifacts at $$src"; exit 1; }; \
@@ -341,7 +343,7 @@ deploy-images:
 	 echo "  Done: $$out"
 
 ## Copy cross-toolchain SDK installer → deploy/sdk/BOARD_TS/
-deploy-sdk:
+deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD_TS/
 	@src="$(BUILD_DIR)/tmp/deploy/sdk"; \
 	 out="$(DEPLOY_DIR)/sdk/$(BOARD)_$(DEPLOY_TS)"; \
 	 test -d "$$src" || { echo "ERROR: No SDK artifacts at $$src"; exit 1; }; \
@@ -353,7 +355,7 @@ deploy-sdk:
 	 echo "  Done: $$out"
 
 ## Copy extensible SDK installer → deploy/esdk/BOARD_TS/
-deploy-esdk:
+deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD_TS/
 	@src="$(BUILD_DIR)/tmp/deploy/sdk"; \
 	 out="$(DEPLOY_DIR)/esdk/$(BOARD)_$(DEPLOY_TS)"; \
 	 test -d "$$src" || { echo "ERROR: No eSDK artifacts at $$src"; exit 1; }; \
@@ -365,7 +367,7 @@ deploy-esdk:
 	 echo "  Done: $$out"
 
 ## Copy .swu OTA package → deploy/swu/BOARD_TS/
-deploy-swu:
+deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/
 	@out="$(DEPLOY_DIR)/swu/$(BOARD)_$(DEPLOY_TS)"; \
 	 echo "Deploying SWU → $$out ..."; \
 	 mkdir -p "$$out"; \
@@ -377,18 +379,18 @@ deploy-swu:
 # -----------------------------------------------------------------------------
 
 ## Remove build/  (alias for clean-build)
-clean: clean-build
+clean: clean-build ## Remove build/
 
 ## Remove the build output directory
 clean-build:
 	rm -rf $(BUILD_DIR)
 
 ## Remove all three Docker images (kas, sdk, esdk)
-clean-docker:
+clean-docker: ## Remove kas/sdk/esdk Docker images
 	docker rmi -f $(KAS_IMAGE) $(SDK_IMAGE) $(ESDK_IMAGE) 2>/dev/null || true
 
 ## Remove build/, downloads/, and sstate-cache/
-clean-all: clean-build
+clean-all: clean-build ## Remove build/, downloads/, sstate-cache/
 	rm -rf $(DL_DIR) $(SSTATE_DIR)
 
 # -----------------------------------------------------------------------------
@@ -396,7 +398,7 @@ clean-all: clean-build
 # -----------------------------------------------------------------------------
 
 ## Install bash tab-completion (appends a source line to ~/.bashrc)
-completion:
+completion: ## Install bash tab-completion into ~/.bashrc
 	@RCFILE="$$HOME/.bashrc"; \
 	 LINE="source \"$(CURDIR)/zion-make-completion.bash\""; \
 	 if grep -qF "$$LINE" "$$RCFILE" 2>/dev/null; then \
@@ -409,40 +411,14 @@ completion:
 # -----------------------------------------------------------------------------
 # Help
 # -----------------------------------------------------------------------------
-help:
-	@printf "\nUsage: make <target> <board>\n"
-	@printf "\n  Examples:\n"
-	@printf "    make image  kr260\n"
-	@printf "    make sdk    kr260\n"
-	@printf "    make esdk   kr260\n"
-	@printf "    make flash  kr260 DEVICE=/dev/sdb\n"
-	@printf "\nYocto build:\n"
-	@printf "  %-24s %s\n" "image"              "Build Yocto SD card image for BOARD  (alias for build)"
-	@printf "  %-24s %s\n" "build"              "Build Yocto SD card image for BOARD"
-	@printf "  %-24s %s\n" "rebuild-image"      "cleansstate image recipe, then rebuild"
-	@printf "  %-24s %s\n" "sdk"                "Build cross-toolchain SDK → deploy/sdk/"
-	@printf "  %-24s %s\n" "esdk"               "Build extensible SDK     → deploy/esdk/"
-	@printf "  %-24s %s\n" "shell"              "Interactive kas shell in the build container"
-	@printf "  %-24s %s\n" "swu"                "Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]"
-	@printf "  %-24s %s\n" "flash"              "Flash SD card  (requires DEVICE=/dev/sdX)"
-	@printf "\nDocker images:\n"
-	@printf "  %-24s %s\n" "kas-image"          "Build/rebuild KAS build container  (docker/yocto/)"
-	@printf "  %-24s %s\n" "ensure-image"       "Build KAS image only when absent"
-	@printf "  %-24s %s\n" "sdk-image"          "Full chain: SDK build → stage → docker build → deploy"
-	@printf "  %-24s %s\n" "ensure-sdk-image"   "Run sdk-image chain only when image is absent"
-	@printf "  %-24s %s\n" "esdk-image"         "Full chain: eSDK build → stage → docker build → deploy"
-	@printf "  %-24s %s\n" "ensure-esdk-image"  "Run esdk-image chain only when image is absent"
-	@printf "\nDeployment (called automatically; can also be run manually):\n"
-	@printf "  %-24s %s\n" "deploy-images"      "Copy .wic artifacts → deploy/images/BOARD_TS/"
-	@printf "  %-24s %s\n" "deploy-sdk"         "Copy SDK installer   → deploy/sdk/BOARD_TS/"
-	@printf "  %-24s %s\n" "deploy-esdk"        "Copy eSDK installer  → deploy/esdk/BOARD_TS/"
-	@printf "  %-24s %s\n" "deploy-swu"         "Copy .swu package    → deploy/swu/BOARD_TS/"
-	@printf "\nClean:\n"
-	@printf "  %-24s %s\n" "clean"              "Remove build/"
-	@printf "  %-24s %s\n" "clean-docker"       "Remove kas/sdk/esdk Docker images"
-	@printf "  %-24s %s\n" "clean-all"          "Remove build/, downloads/, sstate-cache/"
-	@printf "\nUtilities:\n"
-	@printf "  %-24s %s\n" "completion"         "Install bash tab-completion into ~/.bashrc"
-	@printf "\nBoards:\n"
-	@printf "  kr260\n"
-	@printf "\n"
+
+# ── Help ──────────────────────────────────────────────────────────────────────
+# Targets are self-documenting: text after `## ` on a target line is picked up
+# by `make help` automatically, so the listing can never drift from the rules.
+.PHONY: help
+help: ## Show this help
+	@printf '\n  \033[1m%s\033[0m\n' 'Zion-OS'
+	@printf '  Usage: make <target> [VAR=value ...]\n'
+	@printf '\n'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_.\/-]+:.*?## / { printf "    \033[36m%-24s\033[0m %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+	@printf '\n'
