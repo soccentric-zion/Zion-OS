@@ -57,14 +57,21 @@ local_conf_header:
     # restricted license 'commercial' not listed in LICENSE_FLAGS_ACCEPTED".
     LICENSE_FLAGS_ACCEPTED:append = " commercial"
 
-    # Allow the Xilinx embeddedsw-source fetch to run during the extensible
-    # SDK's sstate-enforcement check (oe-check-sstate). This recipe fetches the
-    # multi-GB Xilinx embeddedsw git repo into work-shared and its do_fetch has
-    # no setscene sstate, so without this it aborts the esdk build with
-    # "Task embeddedsw-source-*.do_fetch attempted to execute unexpectedly".
+    # Allow source-acquisition tasks to run during the extensible SDK's
+    # sstate-enforcement check (oe-check-sstate). The ZynqMP baremetal
+    # multiconfigs (fsbl / cortex-r5 / microblaze-pmu) build firmware recipes
+    # (embeddedsw-source, newlib, libgloss, embeddedsw drivers) whose
+    # do_fetch/do_unpack/do_patch fetch git sources into work-shared and have
+    # no setscene sstate. Without this, each one aborts the esdk build with
+    # "Task <recipe>.do_fetch attempted to execute unexpectedly".
+    #
+    # These are source-acquisition tasks, not build tasks: the sstate that the
+    # eSDK verification really cares about (do_compile/do_package/do_populate_
+    # sysroot) is still enforced. Allowing fetch/unpack/patch just permits
+    # (re)acquiring sources from DL_DIR/network during the check.
     #
     # Must use :append here: populate_sdk_ext.bbclass writes its own hard '='
     # assignment to BB_SETSCENE_ENFORCE_IGNORE_TASKS into the SDK's local.conf
     # after this one, and a plain '=' would be clobbered (last-one-wins). With
-    # :append our pattern is appended onto the SDK's default value instead.
-    BB_SETSCENE_ENFORCE_IGNORE_TASKS:append = " embeddedsw-source*:do_fetch"
+    # :append our patterns are appended onto the SDK's default value instead.
+    BB_SETSCENE_ENFORCE_IGNORE_TASKS:append = " *:do_fetch *:do_unpack *:do_patch"
