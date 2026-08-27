@@ -4,7 +4,7 @@
 
 Zion-OS is the Yocto/OpenEmbedded build system for the **Zion** platform — the
 AMD Xilinx **Zynq UltraScale+ MPSoC** (quad-core Cortex-A53 @ 1.5 GHz PS +
-dual-core Cortex-R5 + PL fabric). Default board: **KR260** (Kria KR260 Robotics
+dual-core Cortex-R5 + PL fabric). Default board: **KV260** (Kria KV260 Vision AI
 Starter Kit). Built with [kas](https://kas.readthedocs.io/) + Docker against the
 Xilinx `rel-v2025.2` layer set, with A/B OTA updates via
 [swupdate](https://sbabic.github.io/swupdate/).
@@ -15,8 +15,8 @@ Xilinx `rel-v2025.2` layer set, with A/B OTA updates via
 # 1. Build the KAS Docker image (once)
 make kas-image
 
-# 2. Build the Yocto image for KR260 (default board)
-make image kr260
+# 2. Build the Yocto image for KV260 (default board)
+make image kv260
 
 # 3. Tab completion (optional)
 make completion && source ~/.bashrc

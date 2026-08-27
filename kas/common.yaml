@@ -8,6 +8,7 @@ header:
     - repos/meta-xilinx.yaml
     - repos/meta-xilinx-tools.yaml
     - repos/meta-kria.yaml
+    - repos/meta-openamp.yaml
     - repos/meta-swupdate.yaml
     - repos/meta-zion.yaml
 
@@ -18,6 +19,14 @@ local_conf_header:
   base: |
     # Init manager
     INIT_MANAGER = "systemd"
+
+    # OpenAMP / remoteproc for RPU (Cortex-R5) firmware lifecycle management
+    DISTRO_FEATURES:append = " openamp"
+
+    # Accept the commercial license for the VCU OpenMAX (gstreamer1.0-omx)
+    # plugin and the faad2/faac codecs required by gstreamer1.0-plugins-bad
+    # (enabled by meta-xilinx-multimedia for the KV260 VCU).
+    LICENSE_FLAGS_ACCEPTED:append = " commercial_gstreamer1.0-omx commercial_faad2 commercial_faac"
 
     # Storage image output types
     IMAGE_FSTYPES = "wic.bz2 wic.bmap ext4"
@@ -40,6 +49,13 @@ local_conf_header:
 
     # SWUpdate init integration
     SWUPDATE_INIT = "systemd"
+
+    # Accept the restricted 'commercial' license for the gstreamer stack that
+    # packagegroup-xilinx-gstreamer (added for the KV260 Vision AI stack) pulls
+    # in (gstreamer1.0-omx, faac via gstreamer1.0-plugins-bad, etc.). Without
+    # this the image build fails with "Nothing RPROVIDES/PROVIDES ...
+    # restricted license 'commercial' not listed in LICENSE_FLAGS_ACCEPTED".
+    LICENSE_FLAGS_ACCEPTED:append = " commercial"
 
     # Allow the Xilinx embeddedsw-source fetch to run during the extensible
     # SDK build (its do_fetch sstate is not always present, which otherwise

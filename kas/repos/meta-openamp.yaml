@@ -1,0 +1,14 @@
+header:
+  version: 14
+
+repos:
+  meta-openamp:
+    url: https://github.com/Xilinx/meta-openamp
+    branch: rel-v2025.2
+    # Provides libmetal + OpenAMP libraries and the openamp-layer (BBFILE
+    # collection "openamp-layer"). Enables the OpenAMP/remoteproc dynamic
+    # layer inside meta-xilinx-core, which is required for RPU (Cortex-R5)
+    # firmware lifecycle management on Zynq UltraScale+ MPSoC.
+    path: layers/meta-openamp
+    layers:
+      .:

@@ -20,10 +20,10 @@ SWU_VERSION      ?= $(shell date +%Y%m%d%H%M)
 
 # --- Positional board argument -----------------------------------------------
 # The board name is typed directly after the target — no BOARD= needed:
-#   make image kr260
-#   make sdk   kr260
-#   make esdk  kr260
-#   make shell kr260
+#   make image kv260
+#   make sdk   kv260
+#   make esdk  kv260
+#   make shell kv260
 # This block MUST appear before the BOARD default and KAS_CONFIG / MACHINE
 # definitions so those variables are derived from the correct board name.
 _BOARD_TARGETS := image build rebuild-image sdk esdk sdk-image esdk-image shell swu flash
@@ -42,8 +42,8 @@ endif
 
 # --- Board -------------------------------------------------------------------
 # Select target board — must match a file in kas/boards/<BOARD>.yaml
-# Boards: kr260
-BOARD            ?= kr260
+# Boards: kv260 (default), kr260
+BOARD            ?= kv260
 KAS_CONFIG       := kas/boards/$(BOARD).yaml
 
 # Derive MACHINE automatically from the kas yaml
@@ -132,7 +132,7 @@ ensure-image: ## Build KAS image only when absent
 	         $(MAKE) kas-image; }
 
 ## Build the Yocto SD card image for BOARD — alias for build
-## Usage: make image rpi5
+## Usage: make image kv260
 image: build ## Build Yocto SD card image for BOARD  (alias for build)
 
 ## Full chain: Yocto SDK build → stage installer → docker build → deploy
@@ -312,7 +312,7 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 	@$(MAKE) --no-print-directory deploy-swu DEPLOY_TS=$(DEPLOY_TS)
 
 
-## Flash to SD card.  Usage: make flash kr260 DEVICE=/dev/sdX
+## Flash to SD card.  Usage: make flash kv260 DEVICE=/dev/sdX
 flash: ## Flash SD card  (requires DEVICE=/dev/sdX)
 ifndef DEVICE
 	$(error DEVICE is not set — example: make flash DEVICE=/dev/sdb)

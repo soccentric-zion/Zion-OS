@@ -29,17 +29,17 @@ Zion-OS is a Yocto-based embedded Linux distribution for AMD Xilinx Zynq UltraSc
 
 ```bash
 make kas-image
-make image kr260
+make image kv260
 make swu
-make sdk kr260
-make esdk kr260
+make sdk kv260
+make esdk kv260
 ```
 
-Use `make flash kr260 DEVICE=/dev/sdX` only after independently identifying the target device.
+Use `make flash kv260 DEVICE=/dev/sdX` only after independently identifying the target device.
 
 ## Limitations
 
-No Yocto build, signed update, SD flash, KR260 boot, A/B rollback, recovery, or SDK consumer build was manually verified. Board support beyond the documented KR260 target remains unconfirmed.
+No Yocto build, signed update, SD flash, KV260 boot, A/B rollback, recovery, or SDK consumer build was manually verified. Board support beyond the documented KV260 target remains unconfirmed.
 
 ## Detailed Reference
 
@@ -47,7 +47,7 @@ The retained Yocto guide below contains the repository's extended architecture, 
 # Zion-OS
 
 Yocto-based embedded Linux OS for the AMD Xilinx Zynq UltraScale+ MPSoC platform.
-Default target board: **KR260** (Kria KR260 Robotics Starter Kit).
+Default target board: **KV260** (Kria KV260 Vision AI Starter Kit).
 
 Built with [kas](https://kas.readthedocs.io/) against the Xilinx `rel-v2025.2` layer set.
 Supports A/B OTA updates via [swupdate](https://sbabic.github.io/swupdate/).
@@ -63,7 +63,7 @@ Supports A/B OTA updates via [swupdate](https://sbabic.github.io/swupdate/).
 - [Build Targets](#build-targets)
 - [OTA Update (.swu)](#ota-update-swu)
 - [Flash to SD Card](#flash-to-sd-card)
-- [KR260 Boot & Flash Instructions](#kr260-boot--flash-instructions)
+- [KV260 Boot & Flash Instructions](#kv260-boot--flash-instructions)
 - [SDK / eSDK](#sdk--esdk)
 - [Layer Structure](#layer-structure)
 - [Adding a New Board](#adding-a-new-board)
@@ -77,13 +77,14 @@ Zion-OS
 ├── kas/
 │   ├── common.yaml          # Shared Yocto config (distro, image, caches)
 │   ├── boards/
-│   │   └── kr260.yaml       # KR260 machine config (default)
+│   │   ├── kv260.yaml      # KV260 machine config (default)
+│   │   └── kr260.yaml      # KR260 machine config
 │   └── repos/
 │       ├── poky.yaml              # Xilinx fork of poky (rel-v2025.2)
 │       ├── meta-openembedded.yaml # Xilinx fork of OE (rel-v2025.2)
 │       ├── meta-xilinx.yaml       # Zynq UltraScale+ BSP
 │       ├── meta-xilinx-tools.yaml # Xilinx build tools (bootgen, FSBL, etc.)
-│       ├── meta-kria.yaml         # Kria SOM / KR260 machine configs
+│       ├── meta-kria.yaml         # Kria SOM / KV260 & KR260 machine configs
 │       ├── meta-swupdate.yaml     # swupdate OTA framework
 │       └── meta-zion.yaml        # Custom Zion layer (image recipe, HAL, Client)
 ├── docker/
@@ -93,7 +94,7 @@ Zion-OS
 └── Makefile       # Top-level build orchestration
 ```
 
-**Boot flow on KR260:**
+**Boot flow on KV260:**
 ```
 SD/QSPI → FSBL (First Stage Boot Loader)
         → PMU Firmware
@@ -147,11 +148,11 @@ cd Zion-OS
 # 2. Build the KAS Docker image (once)
 make kas-image
 
-# 3. Build the Yocto image for KR260 (default board)
+# 3. Build the Yocto image for KV260 (default board)
 make image
 
 # Build artifacts land in:
-#   deploy/images/kr260_<timestamp>/  ← .wic.bz2 + .wic.bmap
+#   deploy/images/kv260_<timestamp>/  ← .wic.bz2 + .wic.bmap
 ```
 
 Tab completion (optional):
@@ -167,7 +168,8 @@ source ~/.bashrc
 
 | Board name | MACHINE           | SoC                          |
 |------------|-------------------|------------------------------|
-| `kr260`    | `kr260-robotics`  | Zynq UltraScale+ XCZU5EV     |
+| `kv260`    | `k26-smk-kv-sdt`  | Zynq UltraScale+ XCZU5EV     |
+| `kr260`    | `k26-smk-kr-sdt`  | Zynq UltraScale+ XCZU5EV     |
 
 Add more boards by creating `kas/boards/<name>.yaml` (see [Adding a New Board](#adding-a-new-board)).
 
@@ -176,14 +178,14 @@ Add more boards by creating `kas/boards/<name>.yaml` (see [Adding a New Board](#
 ## Build Targets
 
 ```
-make image  kr260          Build Yocto SD card image (default board: kr260)
-make build  kr260          Alias for image
-make rebuild-image kr260   cleansstate image recipe, then rebuild
-make sdk    kr260          Cross-toolchain SDK installer → deploy/sdk/
-make esdk   kr260          Extensible SDK installer     → deploy/esdk/
-make shell  kr260          Interactive kas shell in the build container
+make image  kv260          Build Yocto SD card image (default board: kv260)
+make build  kv260          Alias for image
+make rebuild-image kv260   cleansstate image recipe, then rebuild
+make sdk    kv260          Cross-toolchain SDK installer → deploy/sdk/
+make esdk   kv260          Extensible SDK installer     → deploy/esdk/
+make shell  kv260          Interactive kas shell in the build container
 make swu                   Build .swu OTA package       → deploy/swu/
-make flash  kr260 DEVICE=/dev/sdX   Flash image to SD card
+make flash  kv260 DEVICE=/dev/sdX   Flash image to SD card
 
 # Override image version for OTA package:
 make swu SWU_VERSION=1.2.3
@@ -221,7 +223,7 @@ The `.swu` contains:
 
 ```bash
 # via swupdate web UI (port 8080) or CLI:
-swupdate -i /path/to/kr260-<version>.swu
+swupdate -i /path/to/kv260-<version>.swu
 ```
 
 After a successful update, U-Boot boots the new slot. The health-check service
@@ -232,7 +234,7 @@ After a successful update, U-Boot boots the new slot. The health-check service
 ## Flash to SD Card
 
 ```bash
-make flash kr260 DEVICE=/dev/sdX
+make flash kv260 DEVICE=/dev/sdX
 # Uses bmaptool for fast, verified write.
 ```
 
@@ -244,15 +246,15 @@ lsblk -d -o NAME,SIZE,MODEL
 
 ---
 
-## KR260 Boot & Flash Instructions
+## KV260 Boot & Flash Instructions
 
 ### Initial SD card setup
 
-1. Build the image: `make image kr260`
-2. Flash: `make flash kr260 DEVICE=/dev/sdX`
-3. Insert the SD card into the KR260 microSD slot.
-4. Set the boot mode jumper on KR260 to SD card boot (SW1: `1100` — check the KR260 Rev1 board user guide).
-5. Connect a USB-UART cable to the KR260 UART0/USB port (J4).
+1. Build the image: `make image kv260`
+2. Flash: `make flash kv260 DEVICE=/dev/sdX`
+3. Insert the SD card into the KV260 microSD slot.
+4. Set the boot mode jumper on KV260 to SD card boot (SW1: `1100` — check the KV260 Rev1 board user guide).
+5. Connect a USB-UART cable to the KV260 UART0/USB port (J4).
 6. Open a serial terminal at **115200 8N1** (e.g. `minicom -D /dev/ttyUSB1 -b 115200`).
 7. Power on; U-Boot and Linux boot messages appear on UART0.
 8. Default login: configured by `meta-zion` (key-based SSH only; see layer README).
@@ -265,7 +267,7 @@ Vitis/PetaLinux. Rootfs A/B and the data partition remain on eMMC or SD.
 
 ### Recovery (bricked board)
 
-1. Connect JTAG via the KR260 JTAG/USB port.
+1. Connect JTAG via the KV260 JTAG/USB port.
 2. Boot a known-good image from SD card using the SD boot mode override.
 3. Or use `xsct` to directly load and run U-Boot over JTAG, then re-flash.
 
@@ -275,8 +277,8 @@ Vitis/PetaLinux. Rootfs A/B and the data partition remain on eMMC or SD.
 
 ```bash
 # Build cross-toolchain SDK (no Docker image):
-make sdk kr260
-# → deploy/sdk/kr260_<timestamp>/*.sh
+make sdk kv260
+# → deploy/sdk/kv260_<timestamp>/*.sh
 
 # Build SDK + Docker image (for CI cross-compilation containers):
 make sdk-image
@@ -303,7 +305,7 @@ against the exact sysroot the image was built with.
 | `meta-xilinx-core`  | Xilinx/meta-xilinx (rel-v2025.2)          | ZynqMP BSP, kernel, U-Boot, ATF      |
 | `meta-xilinx-standalone` | Xilinx/meta-xilinx (rel-v2025.2)    | Bare-metal / FSBL recipes            |
 | `meta-xilinx-tools` | Xilinx/meta-xilinx-tools (rel-v2025.2)    | bootgen, XSCT, Vitis integration     |
-| `meta-kria`         | Xilinx/meta-kria (rel-v2025.2)            | Kria SOM + KR260 machine configs     |
+| `meta-kria`         | Xilinx/meta-kria (rel-v2025.2)            | Kria SOM + KV260 & KR260 machine configs     |
 | `meta-swupdate`     | sbabic/meta-swupdate (scarthgap)          | swupdate OTA framework               |
 | `meta-zion`         | soccentric-zion/meta-zion (rel-v2025.2)    | Zion image, HAL, Client, swu config  |
 
@@ -336,13 +338,13 @@ local_conf_header:
 
 ### Zion-OS (initial — ported from Acadia-OS)
 
-- **Platform:** Raspberry Pi → AMD Xilinx Zynq UltraScale+ MPSoC (KR260)
+- **Platform:** Raspberry Pi → AMD Xilinx Zynq UltraScale+ MPSoC (KV260)
 - **BSP layer:** `meta-raspberrypi` → `meta-xilinx` + `meta-xilinx-tools` + `meta-kria`
 - **poky source:** upstream → Xilinx fork (`rel-v2025.2`)
 - **meta-openembedded source:** upstream → Xilinx fork (`rel-v2025.2`)
 - **Custom layer:** `meta-acadia` → `meta-zion`
 - **Image recipe:** `acadia-image` → `zion-image`
-- **Default board:** `rpi5` → `kr260` (machine: `kr260-robotics`)
+- **Default board:** `rpi5` → `kv260` (machine: `k26-smk-kv-sdt`)
 - **Docker images:** `rpi5-kas`, `rpi5-sdk`, `rpi5-esdk` → `zion-kas`, `zion-sdk`, `zion-esdk`
 - **Kernel image:** `kernel_2712.img` (RPi5-specific) → `Image` (standard arm64)
 - **DTB:** `bcm2712-rpi-5-b.dtb` → `zynqmp-smk-k26-revA-sck-kr-g-revB.dtb`
@@ -352,6 +354,6 @@ local_conf_header:
 - **Removed:** `patch_health.py` (Acadia-Server specific)
 - **Renamed:** `rpi-make-completion.bash` → `zion-make-completion.bash`
 - **Updated:** `config` (HAL repository URL: Acadia-HAL → Zion-HAL)
-- **Updated:** `req.md` (audit prompt: Acadia-OS → Zion-OS, RPi → KR260)
+- **Updated:** `req.md` (audit prompt: Acadia-OS → Zion-OS, RPi → KV260)
 - **swupdate OTA:** A/B dual-rootfs structure preserved; sw-description path updated to `meta/meta-zion/swupdate/sw-description`
 - **Boot flow:** RPi GPU-based boot (config.txt) → Zynq FSBL → PMU FW → ATF → U-Boot → Linux
