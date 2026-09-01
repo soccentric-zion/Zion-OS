@@ -65,6 +65,11 @@ ZION_LAYER_DIR   := meta/meta-zion/meta/meta-zion
 # snapshot directory and is passed explicitly to recursive make calls.
 DEPLOY_TS        := $(shell date +%Y%m%d_%H%M%S)
 
+# How many snapshots to keep per artifact type (images/sdk/esdk/swu) and board.
+# 1 = only the newest copy; every deploy prunes the previous ones automatically.
+# Override to retain history, e.g.:  make image kv260 DEPLOY_KEEP=3
+DEPLOY_KEEP      ?= 1
+
 # SDK / eSDK install paths inside the Docker containers
 SDK_INSTALL_DIR  ?= /opt/poky/sdk
 ESDK_INSTALL_DIR ?= /opt/poky/esdk
@@ -101,7 +106,7 @@ _ESDK_IMAGE_TAG  := $(lastword  $(subst :, ,$(ESDK_IMAGE)))
         sdk-image ensure-sdk-image \
         esdk-image ensure-esdk-image \
         kas-container-script shell flash sdk esdk swu \
-        deploy-images deploy-sdk deploy-esdk deploy-swu \
+        deploy-images deploy-sdk deploy-esdk deploy-swu prune-deploy \
         clean clean-build clean-docker clean-all \
         completion help
 
@@ -348,7 +353,8 @@ deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcar
 	     -exec cp -L {} "$$out/" \;; \
 	 bash "$(CURDIR)/scripts/generate-flash-sdcard.sh" "$$out" "$(BOARD)" "$(DEPLOY_TS)"; \
 	 echo "  Done: $$out"; \
-	 echo "  Flash: cd $$(basename "$$out") && sudo ./flash-sdcard.sh /dev/sdX"
+	 echo "  Flash: cd $$(basename "$$out") && sudo ./flash-sdcard.sh /dev/sdX"; \
+	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=images DEPLOY_TS=$(DEPLOY_TS)
 
 ## Copy cross-toolchain SDK installer → deploy/sdk/BOARD_TS/
 deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD_TS/
@@ -360,7 +366,8 @@ deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD_TS/
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     -name '*.sh' ! -name '*-ext-*' \
 	     -exec cp -L {} "$$out/" \;; \
-	 echo "  Done: $$out"
+	 echo "  Done: $$out"; \
+	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=sdk DEPLOY_TS=$(DEPLOY_TS)
 
 ## Copy extensible SDK installer → deploy/esdk/BOARD_TS/
 deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD_TS/
@@ -372,7 +379,8 @@ deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD_TS/
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     -name '*-ext-*.sh' \
 	     -exec cp -L {} "$$out/" \;; \
-	 echo "  Done: $$out"
+	 echo "  Done: $$out"; \
+	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=esdk DEPLOY_TS=$(DEPLOY_TS)
 
 ## Copy .swu OTA package → deploy/swu/BOARD_TS/
 deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/ (+ install-ota.sh)
@@ -382,7 +390,20 @@ deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/ (+ install-ota.sh)
 	 cp -L "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu" "$$out/"; \
 	 bash "$(CURDIR)/scripts/generate-install-ota.sh" "$$out" "$(BOARD)" "$(SWU_VERSION)"; \
 	 echo "  Done: $$out"; \
-	 echo "  Install: cd $$(basename "$$out") && ./install-ota.sh --serve  (or --device <ip> / --copy <dir>)"
+	 echo "  Install: cd $$(basename "$$out") && ./install-ota.sh --serve  (or --device <ip> / --copy <dir>)"; \
+	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=swu DEPLOY_TS=$(DEPLOY_TS)
+
+## Remove old deploy snapshots, keeping only the newest DEPLOY_KEEP copies
+## per artifact type and board (called automatically after each deploy)
+prune-deploy:
+	@test -n "$(PRUNE_TYPE)" || { echo "ERROR: PRUNE_TYPE not set (images|sdk|esdk|swu)"; exit 1; }; \
+	 dir="$(DEPLOY_DIR)/$(PRUNE_TYPE)"; \
+	 test -d "$$dir" || exit 0; \
+	 old=$$(ls -1d "$$dir"/$(BOARD)_* 2>/dev/null | sort -r | tail -n +$$(($(DEPLOY_KEEP) + 1))); \
+	 for d in $$old; do \
+	     echo "  Pruning old $(PRUNE_TYPE) snapshot: $$d"; \
+	     rm -rf "$$d"; \
+	 done
 
 # -----------------------------------------------------------------------------
 # Clean targets
