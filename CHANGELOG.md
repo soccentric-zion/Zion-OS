@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+### Added — self-contained flash/install scripts next to deployed artifacts
+
+- `deploy/images/BOARD_TS/` now also contains an auto-generated
+  **`flash-sdcard.sh`** — standalone SD-card flasher for the .wic.bz2 in the
+  same folder (bmaptool when a .bmap is present, dd fallback; device type /
+  mount / capacity checks; interactive confirm or `-y`)
+- `deploy/swu/BOARD_TS/` now also contains an auto-generated
+  **`install-ota.sh`** — gets the .swu to the device:
+  `--serve` (HTTP → device web UI or curl), `--device <ip>` (ssh + scp +
+  `swupdate -i`), or `--copy <dir>` (mounted SD/USB stick)
+- Generators: `scripts/generate-flash-sdcard.sh`, `scripts/generate-install-ota.sh`
+  (invoked automatically by `deploy-images` / `deploy-swu`)
+
+### Fixed
+
+- `make swu`: stale `meta/meta-zion/swupdate/...` paths replaced with the real
+  layer root `meta/meta-zion/meta/meta-zion/swupdate/...` (`ZION_LAYER_DIR`);
+  the sw-description/pre-/post-install sources and RSA key path were broken
+  after the meta-zion layer moved to its nested repo layout
+
 ### Added — full feature-complete OS layer (`meta/meta-zion`)
 
 - **Complete Yocto layer** committed locally in `meta/meta-zion`:

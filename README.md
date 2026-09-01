@@ -152,7 +152,14 @@ make kas-image
 make image
 
 # Build artifacts land in:
-#   deploy/images/kv260_<timestamp>/  ← .wic.bz2 + .wic.bmap
+#   deploy/images/kv260_<timestamp>/  ← .wic.bz2 + .wic.bmap + flash-sdcard.sh
+```
+
+Each deploy folder includes an auto-generated, self-contained SD flasher —
+use it on any host that has an SD card, no repo needed:
+
+```bash
+cd deploy/images/<BOARD>_<TIMESTAMP> && sudo ./flash-sdcard.sh /dev/sdX
 ```
 
 Tab completion (optional):
@@ -215,9 +222,18 @@ The `.swu` contains:
 - `rootfs.ext4.gz` — compressed root filesystem for the inactive slot
 - `Image` — kernel
 - `zynqmp-smk-k26-revA-sck-kr-g-revB.dtb` — device tree blob
-- `sw-description` — swupdate manifest (see `meta/meta-zion/swupdate/sw-description`)
+- `sw-description` — swupdate manifest (see `meta/meta-zion/meta/meta-zion/swupdate/sw-description`)
 
-**Signing:** If `meta/meta-zion/swupdate/keys/swupdate-private.pem` is present, the `.swu` is RSA-4096 signed. Generate keys with `scripts/generate-swu-keys.sh`.
+**Signing:** If `meta/meta-zion/meta/meta-zion/swupdate/keys/swupdate-private.pem` is present, the `.swu` is RSA-4096 signed. Generate keys with `scripts/generate-swu-keys.sh`.
+
+The `.swu` deploy directory also ships an auto-generated `install-ota.sh` helper:
+
+```bash
+cd deploy/swu/<BOARD>_<TIMESTAMP>
+./install-ota.sh --serve          # host the .swu over HTTP (web UI or curl)
+./install-ota.sh --device <ip>    # scp to a running device + install via SSH
+./install-ota.sh --copy <dir>     # copy onto a mounted SD/USB stick
+```
 
 **Apply OTA on device:**
 
@@ -236,6 +252,15 @@ After a successful update, U-Boot boots the new slot. The health-check service
 ```bash
 make flash kv260 DEVICE=/dev/sdX
 # Uses bmaptool for fast, verified write.
+```
+
+Alternatively, every image deploy folder contains a standalone flasher that
+works without this repo (bmaptool when available, dd fallback):
+
+```bash
+cd deploy/images/kr260_<timestamp>
+sudo ./flash-sdcard.sh            # lists candidate devices
+sudo ./flash-sdcard.sh /dev/sdX   # confirm, then flash
 ```
 
 **Identify your SD card device first:**

@@ -55,6 +55,12 @@ DL_DIR           ?= $(CURDIR)/downloads
 SSTATE_DIR       ?= $(CURDIR)/sstate-cache
 DEPLOY_DIR       ?= $(CURDIR)/deploy
 
+# Root of the locally committed meta-zion layer. kas clones soccentric-zion/
+# meta-zion into meta/meta-zion/ — the OE layer itself is nested inside that
+# repo (meta/meta-zion/meta/meta-zion/), which is where the swupdate/, wic/
+# etc. content used by the swu target lives.
+ZION_LAYER_DIR   := meta/meta-zion/meta/meta-zion
+
 # Single timestamp for the entire invocation — keeps all artifacts in the same
 # snapshot directory and is passed explicitly to recursive make calls.
 DEPLOY_TS        := $(shell date +%Y%m%d_%H%M%S)
@@ -286,16 +292,16 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 
 	# --- sw-description ---
 	@sed "s|@@VERSION@@|$(SWU_VERSION)|" \
-	    meta/meta-zion/swupdate/sw-description \
+	    $(ZION_LAYER_DIR)/swupdate/sw-description \
 	    > "$(BUILD_DIR)/swu/sw-description"
-	@cp meta/meta-zion/swupdate/pre-install.sh  "$(BUILD_DIR)/swu/"
-	@cp meta/meta-zion/swupdate/post-install.sh "$(BUILD_DIR)/swu/"
+	@cp $(ZION_LAYER_DIR)/swupdate/pre-install.sh  "$(BUILD_DIR)/swu/"
+	@cp $(ZION_LAYER_DIR)/swupdate/post-install.sh "$(BUILD_DIR)/swu/"
 
 	# --- optional RSA signing ---
-	@if [ -f "$(BUILD_DIR)/swu/../../meta/meta-zion/swupdate/keys/swupdate-private.pem" ]; then \
+	@if [ -f "$(ZION_LAYER_DIR)/swupdate/keys/swupdate-private.pem" ]; then \
 	    echo "Signing sw-description with RSA-4096 ..."; \
 	    openssl dgst -sha256 \
-	        -sign "meta/meta-zion/swupdate/keys/swupdate-private.pem" \
+	        -sign "$(ZION_LAYER_DIR)/swupdate/keys/swupdate-private.pem" \
 	        -out  "$(BUILD_DIR)/swu/sw-description.sig" \
 	        "$(BUILD_DIR)/swu/sw-description"; \
 	    echo "Packing SIGNED .swu ..."; \
@@ -331,7 +337,7 @@ endif
 # -----------------------------------------------------------------------------
 
 ## Copy .wic SD card images → deploy/images/BOARD_TS/
-deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/
+deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcard.sh)
 	@src="$(BUILD_DIR)/tmp/deploy/images/$(MACHINE)"; \
 	 out="$(DEPLOY_DIR)/images/$(BOARD)_$(DEPLOY_TS)"; \
 	 test -d "$$src" || { echo "ERROR: No image artifacts at $$src"; exit 1; }; \
@@ -340,7 +346,9 @@ deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     \( -name "*.wic.bz2" -o -name "*.wic.bmap" \) \
 	     -exec cp -L {} "$$out/" \;; \
-	 echo "  Done: $$out"
+	 bash "$(CURDIR)/scripts/generate-flash-sdcard.sh" "$$out" "$(BOARD)" "$(DEPLOY_TS)"; \
+	 echo "  Done: $$out"; \
+	 echo "  Flash: cd $$(basename "$$out") && sudo ./flash-sdcard.sh /dev/sdX"
 
 ## Copy cross-toolchain SDK installer → deploy/sdk/BOARD_TS/
 deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD_TS/
@@ -367,12 +375,14 @@ deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD_TS/
 	 echo "  Done: $$out"
 
 ## Copy .swu OTA package → deploy/swu/BOARD_TS/
-deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/
+deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/ (+ install-ota.sh)
 	@out="$(DEPLOY_DIR)/swu/$(BOARD)_$(DEPLOY_TS)"; \
 	 echo "Deploying SWU → $$out ..."; \
 	 mkdir -p "$$out"; \
 	 cp -L "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu" "$$out/"; \
-	 echo "  Done: $$out"
+	 bash "$(CURDIR)/scripts/generate-install-ota.sh" "$$out" "$(BOARD)" "$(SWU_VERSION)"; \
+	 echo "  Done: $$out"; \
+	 echo "  Install: cd $$(basename "$$out") && ./install-ota.sh --serve  (or --device <ip> / --copy <dir>)"
 
 # -----------------------------------------------------------------------------
 # Clean targets

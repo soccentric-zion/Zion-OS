@@ -44,7 +44,7 @@ SD/QSPI → FSBL → PMU Firmware → ATF (TF-A) → U-Boot → Linux → system
 
 ## A/B OTA Layout
 
-Partition table (`meta/meta-zion/wic/sdimage-zynqmp.wks`):
+Partition table (`meta/meta-zion/meta/meta-zion/wic/sdimage-zynqmp.wks`):
 ```
   boot       FAT32   BOOT.BIN + Image + DTB + extlinux
   rootfs-a   ext4    slot A (active after initial flash)
