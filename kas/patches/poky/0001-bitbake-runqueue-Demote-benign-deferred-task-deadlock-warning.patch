@@ -1,0 +1,32 @@
+From a0765ec87d67a278b0853f74628ead69f5c1c0d9 Mon Sep 17 00:00:00 2001
+From: Zion-OS <zion-os@local>
+Date: Tue, 1 Sep 2026 12:10:54 -0700
+Subject: [PATCH] bitbake: runqueue: Demote benign deferred-task deadlock
+ recovery to debug
+
+With the SDT multiconfigs (fsbl/r5/pmu) fully covered by sstate, the
+runqueue pairs identical native tasks across multiconfigs and its
+deadlock recovery force-runs them, printing hundreds of "Runqueue
+deadlocked on deferred tasks" WARNINGs on every rebuild (also seen
+with PetaLinux 2025.2; benign - build recovers and completes). Demote
+to debug; real runqueue failures still surface as errors.
+---
+ bitbake/lib/bb/runqueue.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/bitbake/lib/bb/runqueue.py b/bitbake/lib/bb/runqueue.py
+index db68f97e68..d55cd0282c 100644
+--- a/bitbake/lib/bb/runqueue.py
++++ b/bitbake/lib/bb/runqueue.py
+@@ -2421,7 +2421,7 @@ class RunQueueExecute:
+         if self.sq_deferred:
+             deferred_tid = list(self.sq_deferred.keys())[0]
+             blocking_tid = self.sq_deferred.pop(deferred_tid)
+-            logger.warning("Runqueue deadlocked on deferred tasks, forcing task %s blocked by %s" % (deferred_tid, blocking_tid))
++            logger.debug("Runqueue deadlocked on deferred tasks (benign multiconfig recovery), forcing task %s blocked by %s" % (deferred_tid, blocking_tid))
+             return True
+ 
+         if self.failed_tids:
+-- 
+2.43.0
+

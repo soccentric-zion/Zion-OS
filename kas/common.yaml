@@ -1,16 +1,18 @@
 header:
   version: 14
   includes:
-    - repos/poky.yaml
-    - repos/meta-arm.yaml
-    - repos/meta-openembedded.yaml
-    - repos/meta-virtualization.yaml
-    - repos/meta-xilinx.yaml
-    - repos/meta-xilinx-tools.yaml
-    - repos/meta-kria.yaml
-    - repos/meta-openamp.yaml
-    - repos/meta-swupdate.yaml
-    - repos/meta-zion.yaml
+    # Repo-root-relative paths (kas resolves string includes against the git
+    # repo root first; file-relative fallbacks emit kas warnings).
+    - kas/repos/poky.yaml
+    - kas/repos/meta-arm.yaml
+    - kas/repos/meta-openembedded.yaml
+    - kas/repos/meta-virtualization.yaml
+    - kas/repos/meta-xilinx.yaml
+    - kas/repos/meta-xilinx-tools.yaml
+    - kas/repos/meta-kria.yaml
+    - kas/repos/meta-openamp.yaml
+    - kas/repos/meta-swupdate.yaml
+    - kas/repos/meta-zion.yaml
 
 distro: poky
 target: zion-image
@@ -75,3 +77,23 @@ local_conf_header:
     # after this one, and a plain '=' would be clobbered (last-one-wins). With
     # :append our patterns are appended onto the SDK's default value instead.
     BB_SETSCENE_ENFORCE_IGNORE_TASKS:append = " *:do_fetch *:do_unpack *:do_patch"
+
+    # QEMU ZynqMP emulation (kria-qemu-kv.inc / runqemu) needs the proprietary
+    # PMU ROM (pmu-rom-native, fetched from xilinx.com). Accepting the
+    # 'xilinx' license flag enables it and silences the "ZynqMP pmu-rom is
+    # not enabled" warning emitted by meta-xilinx-core's xilinx-vars class.
+    LICENSE_FLAGS_ACCEPTED:append = " xilinx"
+
+    # meta-xilinx-tools' sanity check only recognizes the legacy XSCT
+    # workflow (XILINX_WITH_ESW == "xsct"); our SDT-based Kria machines set
+    # XILINX_WITH_ESW = "sdt", so the check produces a false positive
+    # ("layer included but not enabled"). Opt out via the documented skip
+    # variable — meta-xilinx-tools itself (bootgen, xilinx-bootbin) works.
+    SKIP_META_XILINX_TOOLS_SANITY_CHECK = "1"
+
+    # meta-virtualization is included only because meta-xilinx-standalone-sdt
+    # depends on its BBFILE collection (virtualization-layer). Containers are
+    # not used in this image, so 'virtualization' stays out of
+    # DISTRO_FEATURES; opt out of the layer's bbappend warning via the
+    # documented skip variable.
+    SKIP_META_VIRT_SANITY_CHECK = "1"

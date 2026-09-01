@@ -2,6 +2,41 @@
 
 ## [Unreleased]
 
+### Fixed — `make build` is now warning-free (was 189 bitbake + 11 kas warnings)
+
+- **161× `Runqueue deadlocked on deferred tasks`** — benign bitbake recovery for
+  the SDT multiconfigs (fsbl/r5/pmu): identical native tasks are paired across
+  multiconfigs and force-run once sstate covers everything (also affects
+  PetaLinux 2025.2; upstream has no fix). Demoted to debug via
+  `kas/patches/poky/0001-bitbake-runqueue-Demote-...patch`, applied to poky by
+  kas on every checkout (rebase when bumping the poky commit)
+- **20× `ZynqMP pmu-rom is not enabled`** — accept the Xilinx license flag
+  (`LICENSE_FLAGS_ACCEPTED += " xilinx"`); enables `pmu-rom-native` for QEMU
+  ZynqMP emulation, which `kria-qemu-kv.inc` already expects
+- **4× meta-xilinx-tools "not enabled via XILINX_WITH_ESW"** — false positive:
+  the sanity check only knows the legacy XSCT workflow, our Kria SDT machines
+  use `XILINX_WITH_ESW = "sdt"`. Opted out via the documented
+  `SKIP_META_XILINX_TOOLS_SANITY_CHECK = "1"`
+- **4× meta-virtualization "virtualization not in DISTRO_FEATURES"** — the layer
+  is only present because meta-xilinx-standalone-sdt depends on its
+  BBFILE collection; containers are unused. Opted out via
+  `SKIP_META_VIRT_SANITY_CHECK = "1"`
+- **11× kas `Falling back to file-relative addressing`** — all kas include
+  paths are now repo-root-relative (`kas/common.yaml`, `kas/repos/*.yaml`)
+- New `zion-os` pseudo-repo in `kas/repos/poky.yaml` (host-only, `layers: {}`)
+  so the Zion-OS repo can carry patches for upstream layers
+
+### Changed — deploy dir keeps only the newest snapshot per artifact type
+
+- Every deploy target (`deploy-images` / `deploy-sdk` / `deploy-esdk` /
+  `deploy-swu`) now automatically **prunes old `BOARD_TS` snapshots** after
+  deploying, so `deploy/` holds only **one copy per artifact type and board**
+  instead of accumulating ~1.4 GB per build
+- New `DEPLOY_KEEP` variable (default `1`) — set e.g. `make image kv260
+  DEPLOY_KEEP=3` to retain more history
+- New `make prune-deploy PRUNE_TYPE=<images|sdk|esdk|swu>` helper (internal,
+  also usable manually)
+
 ### Added — self-contained flash/install scripts next to deployed artifacts
 
 - `deploy/images/BOARD_TS/` now also contains an auto-generated

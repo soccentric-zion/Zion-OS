@@ -2,6 +2,12 @@ header:
   version: 14
 
 repos:
+  # The Zion-OS build repo itself. Contributes no bitbake layers, but hosts
+  # the kas patches applied to upstream layers (see kas/patches/).
+  zion-os:
+    path: .
+    layers: {}
+
   poky:
     url: https://github.com/Xilinx/poky
     branch: rel-v2025.2
@@ -12,3 +18,14 @@ repos:
       meta:
       meta-poky:
       meta-yocto-bsp:
+    # Bitbake's deferred-task recovery for the SDT multiconfigs (fsbl/r5/pmu)
+    # prints a "Runqueue deadlocked on deferred tasks" WARNING for every
+    # identical native task it force-runs — hundreds per build once sstate
+    # covers everything (also seen with PetaLinux 2025.2; benign, build
+    # recovers and completes; upstream has no fix). Demote the message to
+    # debug. NOTE: rebase against bitbake/lib/bb/runqueue.py when bumping
+    # the poky commit.
+    patches:
+      0001-runqueue-demote-deadlock-warning:
+        repo: zion-os
+        path: kas/patches/poky/0001-bitbake-runqueue-Demote-benign-deferred-task-deadlock-warning.patch
