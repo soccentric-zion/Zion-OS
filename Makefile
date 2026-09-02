@@ -46,6 +46,13 @@ endif
 BOARD            ?= kv260
 KAS_CONFIG       := kas/boards/$(BOARD).yaml
 
+# Sub-make calls (deploy-*, prune-deploy, ...) must inherit BOARD and
+# SWU_VERSION, otherwise they re-evaluate their defaults (BOARD=kv260,
+# SWU_VERSION=fresh timestamp) and artifacts get deployed under the wrong
+# board name / fail to find the .swu file.
+export BOARD
+export SWU_VERSION
+
 # Derive MACHINE automatically from the kas yaml
 MACHINE          := $(shell grep '^machine:' $(KAS_CONFIG) 2>/dev/null | awk '{print $$2}')
 
@@ -285,18 +292,20 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 
 	# --- kernel + DTB (required: kernel/DTB included in OTA) ---
 	$(eval KERNEL := $(shell find $(BUILD_DIR)/tmp/deploy/images/$(MACHINE) \
-	    -name "Image" 2>/dev/null | sort -V | tail -1))
+	    -maxdepth 1 -name "Image" 2>/dev/null | sort | tail -1))
 	$(eval DTB := $(shell find $(BUILD_DIR)/tmp/deploy/images/$(MACHINE) \
-	    -name "zynqmp-smk-k26-revA-sck-kr-g-revB.dtb" 2>/dev/null | sort -V | tail -1))
+	    -maxdepth 1 -name "system.dtb" 2>/dev/null | sort | tail -1))
 	@test -n "$(KERNEL)" || \
-	    { echo "WARNING: Image not found — kernel will not be updated in this .swu"; }
+	    { echo "ERROR: Image not found — kernel will not be included in this .swu"; exit 1; }
 	@test -n "$(DTB)" || \
-	    { echo "WARNING: zynqmp-smk-k26-revA-sck-kr-g-revB.dtb not found — DTB will not be updated in this .swu"; }
-	@[ -n "$(KERNEL)" ] && cp "$(KERNEL)" "$(BUILD_DIR)/swu/Image" || true
-	@[ -n "$(DTB)" ]    && cp "$(DTB)"    "$(BUILD_DIR)/swu/zynqmp-smk-k26-revA-sck-kr-g-revB.dtb" || true
+	    { echo "ERROR: system.dtb not found — DTB will not be included in this .swu"; exit 1; }
+	@cp "$(KERNEL)" "$(BUILD_DIR)/swu/Image"
+	@cp "$(DTB)" "$(BUILD_DIR)/swu/system.dtb"
 
-	# --- sw-description ---
-	@sed "s|@@VERSION@@|$(SWU_VERSION)|" \
+	# --- sw-description (substitute version + kernel/DTB names) ---
+	@sed -e "s|@@VERSION@@|$(SWU_VERSION)|" \
+	     -e "s|@@KERNEL@@|Image|g" \
+	     -e "s|@@DTB@@|system.dtb|g" \
 	    $(ZION_LAYER_DIR)/swupdate/sw-description \
 	    > "$(BUILD_DIR)/swu/sw-description"
 	@cp $(ZION_LAYER_DIR)/swupdate/pre-install.sh  "$(BUILD_DIR)/swu/"
@@ -311,16 +320,19 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 	        "$(BUILD_DIR)/swu/sw-description"; \
 	    echo "Packing SIGNED .swu ..."; \
 	    cd "$(BUILD_DIR)/swu" && \
-	        printf 'sw-description\nsw-description.sig\npre-install.sh\npost-install.sh\nrootfs.ext4.gz\nImage\nzynqmp-smk-k26-revA-sck-kr-g-revB.dtb\n' | \
+	        printf 'sw-description\nsw-description.sig\npre-install.sh\npost-install.sh\nrootfs.ext4.gz\nImage\nsystem.dtb\n' | \
 	        cpio -ov -H newc > "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu"; \
 	else \
 	    echo "WARNING: No private key found — packing UNSIGNED .swu (run scripts/generate-swu-keys.sh to enable signing)"; \
 	    cd "$(BUILD_DIR)/swu" && \
-	        printf 'sw-description\npre-install.sh\npost-install.sh\nrootfs.ext4.gz\nImage\nzynqmp-smk-k26-revA-sck-kr-g-revB.dtb\n' | \
+	        printf 'sw-description\npre-install.sh\npost-install.sh\nrootfs.ext4.gz\nImage\nsystem.dtb\n' | \
 	        cpio -ov -H newc > "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu"; \
 	fi
 	@echo "OTA package: $(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu"
-	@$(MAKE) --no-print-directory deploy-swu DEPLOY_TS=$(DEPLOY_TS)
+	# SWU_VERSION must be pinned explicitly: it is $(shell date ...) in the
+	# parent make, and a sub-make would re-evaluate it (a minute rollover
+	# between packaging and deploy would make the .swu filename not match).
+	@$(MAKE) --no-print-directory deploy-swu DEPLOY_TS=$(DEPLOY_TS) SWU_VERSION=$(SWU_VERSION)
 
 
 ## Flash to SD card.  Usage: make flash kv260 DEVICE=/dev/sdX
