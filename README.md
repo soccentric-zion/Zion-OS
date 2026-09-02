@@ -222,9 +222,9 @@ The `.swu` contains:
 - `rootfs.ext4.gz` — compressed root filesystem for the inactive slot
 - `Image` — kernel
 - `zynqmp-smk-k26-revA-sck-kr-g-revB.dtb` — device tree blob
-- `sw-description` — swupdate manifest (see `meta/meta-zion/meta/meta-zion/swupdate/sw-description`)
+- `sw-description` — swupdate manifest (see `meta/meta-zion/swupdate/sw-description`)
 
-**Signing:** If `meta/meta-zion/meta/meta-zion/swupdate/keys/swupdate-private.pem` is present, the `.swu` is RSA-4096 signed. Generate keys with `scripts/generate-swu-keys.sh`.
+**Signing:** If `meta/meta-zion/swupdate/keys/swupdate-private.pem` is present, the `.swu` is RSA-4096 signed. Generate keys with `scripts/generate-swu-keys.sh`.
 
 The `.swu` deploy directory also ships an auto-generated `install-ota.sh` helper:
 

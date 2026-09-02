@@ -62,11 +62,11 @@ DL_DIR           ?= $(CURDIR)/downloads
 SSTATE_DIR       ?= $(CURDIR)/sstate-cache
 DEPLOY_DIR       ?= $(CURDIR)/deploy
 
-# Root of the locally committed meta-zion layer. kas clones soccentric-zion/
-# meta-zion into meta/meta-zion/ — the OE layer itself is nested inside that
-# repo (meta/meta-zion/meta/meta-zion/), which is where the swupdate/, wic/
-# etc. content used by the swu target lives.
-ZION_LAYER_DIR   := meta/meta-zion/meta/meta-zion
+# Root of the locally committed meta-zion layer. kas pulls the layer from
+# soccentric-zion/meta-zion into meta/meta-zion/ — the repository root IS the
+# OE layer (conf/, recipes-*/, wic/, swupdate/), which is where the swupdate/,#
+# wic/ etc. content used by the swu target lives.
+ZION_LAYER_DIR   := meta/meta-zion
 
 # Single timestamp for the entire invocation — keeps all artifacts in the same
 # snapshot directory and is passed explicitly to recursive make calls.
