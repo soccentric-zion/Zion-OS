@@ -5,7 +5,11 @@ repos:
   meta-zion:
     url: git@github.com:soccentric-zion/meta-zion.git
     branch: develop
-    # TODO: pin to a specific commit — run scripts/pin-layers.sh
+    # Pinned so kas materializes exactly this state instead of force-
+    # resetting the local branch to origin/develop on every run (which
+    # silently discards any local layer commits). Bump alongside pushes;
+    # scripts/pin-layers.sh can automate this.
+    commit: c1ea7d7
     path: meta/meta-zion
     layers:
       meta/meta-zion:
