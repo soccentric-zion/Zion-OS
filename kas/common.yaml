@@ -40,6 +40,12 @@ local_conf_header:
     # SWUpdate: enable built-in Mongoose web server and progress IPC
     PACKAGECONFIG:append:pn-swupdate = " webserver"
 
+    # Reproducible builds: pin all timestamps to a fixed epoch so images,
+    # SDKs and packages built on different hosts are bit-identical.
+    SOURCE_DATE_EPOCH = "1735689600"
+    # Deterministic sstate/pkgserv artifacts
+    BUILD_REPRODUCIBLE_BINARIES = "1"
+
     # Required by Poky sanity checks (must match LOCALCONF_VERSION in poky)
     CONF_VERSION = "2"
 

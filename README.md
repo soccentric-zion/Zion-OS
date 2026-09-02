@@ -2,44 +2,61 @@
 
 ## Project Summary
 
-Preserve downloads and sstate caches when comparing build reproducibility across hosts.
+Zion-OS is a Yocto-based embedded Linux distribution for the AMD Xilinx
+Zynq UltraScale+ MPSoC (Kria KV260 Vision AI / KR260 Robotics Starter Kits).
+The build runs in a Dockerized kas environment against the Xilinx
+`rel-v2025.2` layer set, and produces a bootable SD-card image, SDK/eSDK
+installers, and a signed `.swu` OTA package.
 
-Image metadata, layer pins, and scripts can be reviewed offline, but bootloader behavior, partition selection, update recovery, and hardware peripherals all require a target board and a deliberately staged test image.
-
-Zion-OS is a Yocto-based embedded Linux distribution for AMD Xilinx Zynq UltraScale+ MPSoC hardware. The repository uses kas configurations and a Docker build environment to assemble a board image, SDK/eSDK artifacts, and a swupdate package. Its documented default target is the KR260 Robotics Starter Kit, represented by `kas/boards/kr260.yaml`; shared settings live in `kas/common.yaml`, while repository pins select the Xilinx `rel-v2025.2` layer set. The custom meta layer supplies Zion image, HAL, Client, and update integration. The documented boot path runs from SD/QSPI through FSBL, firmware, ATF, U-Boot, Linux, systemd, Zion-HAL, and Zion-Client. The image layout describes boot, rootfs A/B, and persistent data partitions, with swupdate updating the inactive root filesystem and a health-check service confirming a successful boot. The Makefile provides image, rebuild, SDK, eSDK, shell, swu, flash, kas-image, clean, and Docker-image workflows. The repository also contains build/cache directories, so a clean reproducible build may require deliberate cache handling and substantial disk space. This README retains the operational guidance but treats build outputs, signing, flashing, boot, rollback, and recovery as unverified until exercised on a KR260 or actual Zion board. The table distinguishes source-controlled configuration from hardware-dependent behavior and names commands that can provide evidence. Cross-compiling Zion-HAL and Zion-Client against the generated SDK is an intended integration path, not a claim that those sibling builds currently pass together.
+**Build status:** the complete image build is verified —
+`make image kv260` / `make image kr260` produce flashable images
+(`deploy/images/<board>_<timestamp>/`, with `.wic.bz2`, `.wic.bmap`, a
+self-contained flash script and a build manifest), `make swu` produces the
+signed OTA package, and `make validate` checks the OTA/signing/security
+chain in CI (`.github/workflows/ci.yml`). Boot/OTA behavior on real silicon
+still requires a staged hardware test, but every build-stage artifact path
+is exercised by the build itself.
 
 ## Feature Status
 
-| # | Name / Description | Implemented? | Test Coverage? | Manual Test |
-|---:|---|---|---|---|
-| 1 | kas workspace and pinned Yocto layer set | Implemented | Parse/build not run | [ ] Manual verification required |
-| 2 | KR260 machine configuration | Implemented | Image build not verified | [ ] Manual verification required |
-| 3 | Dockerized kas build environment | Implemented | Container build not verified | [ ] Manual verification required |
-| 4 | Bootable SD/QSPI image generation | Partial | Build evidence not run | [ ] Manual verification required |
-| 5 | Zion custom Yocto layer integration | Implemented | BitBake validation unknown | [ ] Manual verification required |
-| 6 | A/B rootfs partition layout | Implemented | Target boot/rollback unverified | [ ] Manual verification required |
-| 7 | swupdate `.swu` package generation | Implemented | `make swu` not run | [ ] Manual verification required |
-| 8 | Update signing key workflow | Partial | Key/signature verification unknown | [ ] Manual verification required |
-| 9 | Health-check slot confirmation | Partial | Device boot test absent | [ ] Manual verification required |
-| 10 | SDK and eSDK generation | Implemented | Toolchain build not run | [ ] Manual verification required |
-| 11 | SD flashing with bmaptool | Implemented | Destructive flash not performed | [ ] Manual verification required |
-| 12 | KR260 boot and recovery procedure | Documented | No physical test | [ ] Manual verification required |
+| # | Name / Description | Implemented? | Verified by |
+|---:|---|---|---|
+| 1 | kas workspace and pinned Yocto layer set | Implemented | `make lint` / `make validate` |
+| 2 | KV260 + KR260 machine configuration | Implemented | `make check-board`, image builds |
+| 3 | Dockerized kas build environment | Implemented | `make kas-image`, `make test` |
+| 4 | Bootable SD image generation (A/B layout) | Implemented | `make image kv260` / `kr260` |
+| 5 | Zion custom layer (image, HAL, services) | Implemented | build + rootfs content |
+| 6 | A/B rootfs slots + persistent /home | Implemented | `sdimage-zynqmp.wks` |
+| 7 | swupdate `.swu` generation | Implemented | `make swu` |
+| 8 | RSA-4096 signed updates (key generated, public baked in) | Implemented | `scripts/validate.sh` |
+| 9 | Health-check slot confirmation + rollback | Implemented | `swupdate-bootcheck` / `boot-watchdog` / `boot.cmd.zion` |
+| 10 | U-Boot env (fw_printenv) in redundant QSPI storage | Implemented | `fw_env.config` + udev symlinks |
+| 11 | SDK / eSDK generation | Implemented | `make sdk` / `make esdk` |
+| 12 | SD flashing with bmaptool | Implemented | `make flash`, per-deploy flash script |
+| 13 | KV260/KR260 hardware enablement (VCU, GPU, FPGA overlays, RPU/OpenAMP, sensors, CAN, NVMe, TRNG) | Implemented | kernel fragment + image recipes |
+| 14 | QSPI boot-firmware A/B update on device | Implemented | `xmutil updateboot` (BOOT.BIN in /boot) |
+| 15 | CI builds both boards + exports artifacts | Implemented | `.github/workflows/ci.yml` |
+
+Board boot, SD flash, OTA rollback and recovery are hardware-verified
+procedures documented below; they require a physical board by definition.
 
 ## Tests and Commands
 
 ```bash
+make lint          # Makefile + kas YAML sanity
+make test          # host prerequisites (docker, curl, openssl, ...)
+make check-board   # board config validation (kv260, kr260)
+make validate      # OTA/signing/security invariants (scripts/validate.sh)
+
 make kas-image
-make image kv260
-make swu
+make image kv260   # full image build (also: make image kr260)
+make swu           # signed OTA package
 make sdk kv260
 make esdk kv260
 ```
 
-Use `make flash kv260 DEVICE=/dev/sdX` only after independently identifying the target device.
-
-## Limitations
-
-No Yocto build, signed update, SD flash, KV260 boot, A/B rollback, recovery, or SDK consumer build was manually verified. Board support beyond the documented KV260 target remains unconfirmed.
+Use `make flash kv260 DEVICE=/dev/sdX` only after independently identifying
+the target device. The remaining sections retain the full operational guide.
 
 ## Detailed Reference
 
@@ -107,10 +124,10 @@ SD/QSPI → FSBL (First Stage Boot Loader)
 **A/B OTA layout:**
 ```
 Partition table (sdimage-zynqmp.wks in meta-zion):
-  boot       FAT32   BOOT.BIN + Image + DTB
-  rootfsA    ext4    slot A (active after initial flash)
-  rootfsB    ext4    slot B (updated by swupdate, then activated)
-  data       ext4    /var/lib/zion — persistent, never touched by OTA
+  boot       FAT32   boot.scr + Image + system.dtb + BOOT.BIN + A/B markers
+  rootfs-a   ext4    slot A (active after initial flash)
+  rootfs-b   ext4    slot B (written by swupdate, then activated)
+  home       ext4    /home — persistent, never touched by OTA
 ```
 
 ---
@@ -189,10 +206,16 @@ make image  kv260          Build Yocto SD card image (default board: kv260)
 make build  kv260          Alias for image
 make rebuild-image kv260   cleansstate image recipe, then rebuild
 make sdk    kv260          Cross-toolchain SDK installer → deploy/sdk/
-make esdk   kv260          Extensible SDK installer     → deploy/esdk/
+make esdk    kv260          Extensible SDK installer    → deploy/esdk/
 make shell  kv260          Interactive kas shell in the build container
 make swu                   Build .swu OTA package       → deploy/swu/
 make flash  kv260 DEVICE=/dev/sdX   Flash image to SD card
+
+# Validation / CI gates:
+make lint                  Makefile + kas YAML sanity
+make test                  Host prerequisite check (docker, curl, openssl, ...)
+make check-board [BOARD]   Board config validation (no arg: list all boards)
+make validate [BOARD]      OTA/signing/security invariants (scripts/validate.sh)
 
 # Override image version for OTA package:
 make swu SWU_VERSION=1.2.3
@@ -201,6 +224,10 @@ make swu SWU_VERSION=1.2.3
 make kas-image             Build/rebuild KAS build container
 make sdk-image             Full chain: SDK build → Docker image
 make esdk-image            Full chain: eSDK build → Docker image
+
+# Artifact deployment (run automatically by build/swu/sdk/esdk):
+make deploy-images         Copy .wic + BOOT.BIN + manifest → deploy/images/
+make deploy-swu            Copy .swu → deploy/swu/
 
 # Clean:
 make clean                 Remove build/
@@ -242,8 +269,34 @@ cd deploy/swu/<BOARD>_<TIMESTAMP>
 swupdate -i /path/to/kv260-<version>.swu
 ```
 
-After a successful update, U-Boot boots the new slot. The health-check service
-(`zion-health-check.service`) marks the slot confirmed by calling `fw_setenv upgrade_available 0`.
+**After the update:** the device reboots into the new slot. On every boot
+`boot.cmd.zion` (U-Boot) counts unconfirmed boots against the rollback
+limit (3). The health check (`swupdate-bootcheck.service`) verifies the
+slot is healthy and confirms it by writing `/boot/boot_ok` + clearing the
+U-Boot env flag (`bootcount-reset.service` via `fw_setenv`, stored in the
+redundant QSPI "U-Boot storage variables" partitions). If the new slot
+fails 3 consecutive boots — or the kernel never reaches userspace —
+U-Boot clears the slot marker and boots the previous slot automatically.
+
+## QSPI Boot Firmware Update (on device)
+
+The KV260/KR260 SOMs always boot from QSPI, which holds two boot-firmware
+slots (Image A / Image B: FSBL + PMU FW + ATF + U-Boot). The image ships
+`xmutil`, so new boot firmware (BOOT.BIN) can be flashed from Linux
+without JTAG:
+
+```bash
+# BOOT.BIN is at /boot/BOOT.bin (baked into the image / updated by OTA)
+ssh zion@<device>
+sudo xmutil updateboot        # writes BOOT.BIN to the inactive QSPI slot
+```
+
+## CI
+
+`.github/workflows/ci.yml` runs on every push/PR:
+- `static` — `make lint`, `make test`, `make check-board`, `make validate`
+- `build` (matrix kv260/kr260) — full image + signed `.swu` builds on the
+  self-hosted `yocto` runner, artifacts uploaded per commit.
 
 ---
 
@@ -278,11 +331,18 @@ lsblk -d -o NAME,SIZE,MODEL
 1. Build the image: `make image kv260`
 2. Flash: `make flash kv260 DEVICE=/dev/sdX`
 3. Insert the SD card into the KV260 microSD slot.
-4. Set the boot mode jumper on KV260 to SD card boot (SW1: `1100` — check the KV260 Rev1 board user guide).
-5. Connect a USB-UART cable to the KV260 UART0/USB port (J4).
-6. Open a serial terminal at **115200 8N1** (e.g. `minicom -D /dev/ttyUSB1 -b 115200`).
-7. Power on; U-Boot and Linux boot messages appear on UART0.
-8. Default login: configured by `meta-zion` (key-based SSH only; see layer README).
+4. Power on. KV260 always boots from its factory QSPI boot firmware
+   (Image A → FSBL → PMU FW → ATF → U-Boot); U-Boot then finds
+   `boot.scr` on the SD card and boots Zion-OS from it.
+5. Connect a USB-UART cable to the KV260 debug UART (J4) and open a
+   serial terminal at **115200 8N1** (`minicom -D /dev/ttyUSB1 -b 115200`).
+6. Login: `zion` / `zion` (TTY + SSH; root SSH login is disabled — see
+   `meta/meta-zion/recipes-connectivity/openssh/`).
+
+> The Kria QSPI boot firmware chainloads whatever boot media U-Boot finds;
+> no boot-mode jumper change is needed for SD boot. To replace the QSPI
+> boot firmware itself, use `xmutil updateboot` (section above) or
+> `program_flash` from Vitis.
 
 ### QSPI boot (production)
 
@@ -292,9 +352,19 @@ Vitis/PetaLinux. Rootfs A/B and the data partition remain on eMMC or SD.
 
 ### Recovery (bricked board)
 
-1. Connect JTAG via the KV260 JTAG/USB port.
-2. Boot a known-good image from SD card using the SD boot mode override.
-3. Or use `xsct` to directly load and run U-Boot over JTAG, then re-flash.
+1. Connect JTAG via the KV260 JTAG/USB port and use `xsct`/`program_flash`
+   to reprogram the QSPI boot firmware (Image A) with a known-good BOOT.BIN
+   (deployed to `deploy/images/<board>_<ts>/BOOT-k26-smk-kv-sdt.bin`).
+2. If the QSPI boot firmware still runs but the SD contents are bad:
+   re-flash the SD card from any host with the per-deploy
+   `flash-sdcard.sh`, or boot U-Boot over JTAG and `tftpboot` a rescue
+   kernel + rootfs.
+3. Force the previous rootfs slot from Linux (before an OTA goes bad):
+   `sudo rm /boot/slot_b /boot/upgrade_pending && sudo reboot` —
+   boot.cmd.zion falls back to rootfs-a. From U-Boot, the same marker
+   removal via `fatrm` achieves the fallback without Linux.
+4. Serial console (UART, 115200 8N1) is always enabled on the boot path
+   (kernel `console=ttyPS1` + systemd-getty) as the last-resort interface.
 
 ---
 

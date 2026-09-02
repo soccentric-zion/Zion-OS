@@ -56,3 +56,7 @@ meta/*
 docker/esdk/ssh/
 
 sstate/
+
+# SDK installers staged into Docker build contexts by sdk-image/esdk-image
+docker/sdk/sdk.sh
+docker/esdk/esdk.sh

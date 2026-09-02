@@ -9,7 +9,7 @@ repos:
     # resetting the local branch to origin/develop on every run (which
     # silently discards any local layer commits). Bump alongside pushes;
     # scripts/pin-layers.sh can automate this.
-    commit: 0d83aa2
+    commit: 9bcbf6d
     path: meta/meta-zion
     layers:
       # the repo root IS the layer (flat layout, no meta/meta-zion nesting)

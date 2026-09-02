@@ -1,0 +1,74 @@
+# Zion-OS CI
+#
+# Fast jobs (lint / test / check-board / validate) run on GitHub-hosted
+# runners. The full Yocto image builds need large disk + long runtimes and
+# therefore target the self-hosted runner labelled `yocto` (>= 250 GB free
+# disk, 8+ cores). Downloads and sstate caches persist between runs via the
+# workspace directory on the runner, so incremental CI builds are fast.
+#
+# Artifacts (wic.bz2/bmap + flash script + manifest, and a signed .swu when
+# the signing key is present on the runner) are exported per job.
+
+name: ci
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  KAS_IMAGE: zion-kas:latest
+  KAS_VERSION: "4.5"
+
+jobs:
+  static:
+    name: lint / test / validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install check dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq python3-yaml openssl
+      - name: make lint
+        run: make lint
+      - name: make test
+        run: make test
+      - name: make check-board (all boards)
+        run: |
+          make check-board
+          make check-board kv260
+          make check-board kr260
+      - name: make validate (all boards)
+        run: |
+          make validate
+          make validate kv260
+          make validate kr260
+
+  build:
+    name: image ${{ matrix.board }}
+    needs: static
+    # Yocto requires a beefy runner; label yours `yocto` (self-hosted).
+    runs-on: [self-hosted, yocto]
+    strategy:
+      fail-fast: false
+      matrix:
+        board: [kv260, kr260]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the KAS build container
+        run: make kas-image
+      - name: Build the image (${{ matrix.board }})
+        run: make image ${{ matrix.board }}
+      - name: Build the signed .swu OTA package
+        run: make swu ${{ matrix.board }}
+      - name: Export artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zion-${{ matrix.board }}-${{ github.sha }}
+          path: |
+            deploy/images/${{ matrix.board }}_*
+            deploy/swu/${{ matrix.board }}_*
+          if-no-files-found: error
+          retention-days: 14

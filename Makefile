@@ -26,7 +26,7 @@ SWU_VERSION      ?= $(shell date +%Y%m%d%H%M)
 #   make shell kv260
 # This block MUST appear before the BOARD default and KAS_CONFIG / MACHINE
 # definitions so those variables are derived from the correct board name.
-_BOARD_TARGETS := image build rebuild-image sdk esdk sdk-image esdk-image shell swu flash
+_BOARD_TARGETS := image build rebuild-image sdk esdk sdk-image esdk-image shell swu flash check-board validate
 
 ifneq ($(filter $(_BOARD_TARGETS),$(firstword $(MAKECMDGOALS))),)
   _BOARD_ARG := $(word 2,$(MAKECMDGOALS))
@@ -115,6 +115,7 @@ _ESDK_IMAGE_TAG  := $(lastword  $(subst :, ,$(ESDK_IMAGE)))
         kas-container-script shell flash sdk esdk swu \
         deploy-images deploy-sdk deploy-esdk deploy-swu prune-deploy \
         clean clean-build clean-docker clean-all \
+        check-board lint test validate \
         completion help
 
 all: build
@@ -329,9 +330,10 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 	        cpio -ov -H newc > "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu"; \
 	fi
 	@echo "OTA package: $(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu"
-	# SWU_VERSION must be pinned explicitly: it is $(shell date ...) in the
-	# parent make, and a sub-make would re-evaluate it (a minute rollover
-	# between packaging and deploy would make the .swu filename not match).
+	# SWU_VERSION must be pinned explicitly: it is $(shell date +%Y%m%d%H%M)
+	# in the parent make, and a sub-make would re-evaluate it (a minute
+	# rollover between packaging and deploy would make the .swu filename
+	# not match).
 	@$(MAKE) --no-print-directory deploy-swu DEPLOY_TS=$(DEPLOY_TS) SWU_VERSION=$(SWU_VERSION)
 
 
@@ -354,17 +356,26 @@ endif
 # -----------------------------------------------------------------------------
 
 ## Copy .wic SD card images → deploy/images/BOARD_TS/
-deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcard.sh)
+deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcard.sh + manifest)
 	@src="$(BUILD_DIR)/tmp/deploy/images/$(MACHINE)"; \
 	 out="$(DEPLOY_DIR)/images/$(BOARD)_$(DEPLOY_TS)"; \
 	 test -d "$$src" || { echo "ERROR: No image artifacts at $$src"; exit 1; }; \
 	 echo "Deploying SD card images → $$out ..."; \
 	 mkdir -p "$$out"; \
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
-	     \( -name "*.wic.bz2" -o -name "*.wic.bmap" \) \
+	     \( -name "*.wic.bz2" -o -name "*.wic.bmap" -o -name "BOOT*.bin" -o -name "boot.bin" \) \
 	     -exec cp -L {} "$$out/" \;; \
 	 bash "$(CURDIR)/scripts/generate-flash-sdcard.sh" "$$out" "$(BOARD)" "$(DEPLOY_TS)"; \
-	 echo "  Done: $$out"; \
+	 { printf 'board=%s\n' "$(BOARD)"; \
+	   printf 'machine=%s\n' "$(MACHINE)"; \
+	   printf 'timestamp=%s\n' "$(DEPLOY_TS)"; \
+	   printf 'image=%s\n' "$(IMAGE_TARGET)"; \
+	   printf 'git-commit=%s\n' "$$(git -C $(CURDIR) rev-parse HEAD 2>/dev/null || echo unknown)"; \
+	   printf 'meta-zion-commit=%s\n' "$$(git -C $(ZION_LAYER_DIR) rev-parse HEAD 2>/dev/null || echo unknown)"; \
+	   _kv=$$(find "$$src" -maxdepth 1 -name 'Image--*.bin' | sort | tail -1); \
+	   [ -n "$$_kv" ] && printf 'kernel=%s\n' "$$(basename "$$_kv")"; \
+	 } > "$$out/manifest.txt"; \
+	 echo "  Done: $$out (manifest.txt written)"; \
 	 echo "  Flash: cd $$(basename "$$out") && sudo ./flash-sdcard.sh /dev/sdX"; \
 	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=images DEPLOY_TS=$(DEPLOY_TS)
 
@@ -439,6 +450,38 @@ clean-all: clean-build ## Remove build/, downloads/, sstate-cache/
 # -----------------------------------------------------------------------------
 # Utilities
 # -----------------------------------------------------------------------------
+
+## Validate a board config (or list all):  make check-board kv260
+check-board: ## Validate board config / list boards  [BOARD=...]
+	@bash "$(CURDIR)/scripts/check-board.sh" $(BOARD)
+
+## Makefile syntax + YAML sanity + build-container prerequisites
+lint: ## Syntax-check Makefile + parse all kas YAML
+	@make -n image >/dev/null 2>&1 || { echo "ERROR: Makefile does not parse"; exit 1; }; \
+	 echo "  ok    Makefile parses"; \
+	 for f in kas/common.yaml kas/boards/*.yaml kas/repos/*.yaml; do \
+	     python3 -c "import sys,yaml; yaml.safe_load(open(sys.argv[1]))" "$$f" \
+	         && echo "  ok    $$f" || exit 1; \
+	 done
+
+## Host prerequisite check (docker, curl, bmaptool, openssl, python3-yaml)
+test: ## Check build host prerequisites (docker, curl, openssl, ...)
+	@for tool in docker curl openssl python3 gzip cpio; do \
+	     command -v $$tool >/dev/null 2>&1 \
+	         && echo "  ok    $$tool" \
+	         || { echo "  FAIL  $$tool not found"; exit 1; }; \
+	 done; \
+	 docker info >/dev/null 2>&1 \
+	     && echo "  ok    docker daemon reachable" \
+	     || { echo "  FAIL  docker daemon not reachable (is DOCKER_HOST set / is the daemon running?)"; exit 1; }; \
+	 python3 -c "import yaml" 2>/dev/null \
+	     && echo "  ok    python3-yaml" \
+	     || echo "  WARN  python3-yaml missing (only needed for make lint)"; \
+	 echo "test: all prerequisites OK"
+
+## Static invariants: layer/OTA/signing/security chain lines up
+validate: ## Validate image/OTA/signing/security invariants [BOARD=...]
+	@bash "$(CURDIR)/scripts/validate.sh" $(BOARD)
 
 ## Install bash tab-completion (appends a source line to ~/.bashrc)
 completion: ## Install bash tab-completion into ~/.bashrc

@@ -42,6 +42,7 @@ _zion_make() {
         kas-image ensure-image ensure-sdk-image ensure-esdk-image
         shell flash swu
         deploy-images deploy-sdk deploy-esdk deploy-swu
+        check-board lint test validate
         clean clean-build clean-docker clean-all
         completion help
     "

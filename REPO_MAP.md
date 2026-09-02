@@ -18,7 +18,9 @@ directory and must never be hand-edited or tracked.
 
 **Targets:** `make build`, `make image`, `make shell [board]`, `make swu`
 (OTA package), `make sdk`/`esdk`, `make flash`, `make deploy-*`,
-`make clean`/`clean-all`.
+`make clean`/`clean-all`, plus validation gates `make lint`, `make test`,
+`make check-board [board]`, `make validate [board]` (CI in
+`.github/workflows/ci.yml`).
 
 **KAS image:** `zion-kas:latest` (built from `docker/yocto/`). `build/`,
 `downloads/`, `sstate-cache/` are gitignored bind-mounted host dirs.
