@@ -27,6 +27,12 @@ local_conf_header:
     # OpenAMP / remoteproc for RPU (Cortex-R5) firmware lifecycle management
     DISTRO_FEATURES:append = " openamp"
 
+    # webconfigd talks to systemd over D-Bus via polkit (see its recipe's
+    # 50-webconfigd.polkit.rules). polkit is skipped unless this distro
+    # feature is enabled -- without it, RRECOMMENDS:webconfigd = "... polkit"
+    # has no buildable provider and the image fails to build outright.
+    DISTRO_FEATURES:append = " polkit"
+
     # Accept the commercial license for the VCU OpenMAX (gstreamer1.0-omx)
     # plugin and the faad2/faac codecs required by gstreamer1.0-plugins-bad
     # (enabled by meta-xilinx-multimedia for the KV260 VCU).
