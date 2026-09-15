@@ -1,0 +1,14 @@
+header:
+  version: 14
+
+repos:
+  # Zion-Configuration ships its own meta-webconfig Yocto layer (the
+  # on-device WebConfig daemon + static frontend + schemas + board
+  # manifest). Only that subdirectory is a layer; the rest of the repo
+  # (Rust workspace, frontend source) is not needed by the build.
+  zion-configuration:
+    url: git@github.com:soccentric-zion/Zion-Configuration.git
+    branch: develop
+    path: meta/zion-configuration
+    layers:
+      meta-webconfig:

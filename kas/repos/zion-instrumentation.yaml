@@ -1,0 +1,22 @@
+header:
+  version: 14
+
+repos:
+  # Zion-Instrumentation ships its own Yocto layer (yocto/, collection
+  # name "instrumentation"). NOT yet added to any IMAGE_INSTALL: the
+  # recipe's COMPATIBLE_MACHINE list matches the literal machine name
+  # "zynq-ultrascale", not Zion-OS's actual Kria SOM machines
+  # (k26-smk-kr-sdt / k26-smk-kv-sdt), and there are no
+  # devices/capabilities/resource-profile descriptors for either — both
+  # leftover from this leaf starting as an unadapted
+  # Arches-Instrumentation copy. Adding the "instrumentation" package to
+  # IMAGE_INSTALL before that is fixed would fail the build ("nothing
+  # provides instrumentation"), not just ship an empty package. See
+  # Zion-Instrumentation/yocto's layer.conf and instrumentation.bb for
+  # the parts still needing board-specific work.
+  zion-instrumentation:
+    url: git@github.com:soccentric-zion/Zion-Instrumentation.git
+    branch: develop
+    path: meta/zion-instrumentation
+    layers:
+      yocto:

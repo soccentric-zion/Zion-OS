@@ -13,6 +13,8 @@ header:
     - kas/repos/meta-openamp.yaml
     - kas/repos/meta-swupdate.yaml
     - kas/repos/meta-zion.yaml
+    - kas/repos/zion-configuration.yaml
+    - kas/repos/zion-instrumentation.yaml
 
 distro: poky
 target: zion-image
