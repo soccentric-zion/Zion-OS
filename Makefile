@@ -46,10 +46,10 @@ endif
 BOARD            ?= kv260
 KAS_CONFIG       := kas/boards/$(BOARD).yaml
 
-# Sub-make calls (deploy-*, prune-deploy, ...) must inherit BOARD and
-# SWU_VERSION, otherwise they re-evaluate their defaults (BOARD=kv260,
-# SWU_VERSION=fresh timestamp) and artifacts get deployed under the wrong
-# board name / fail to find the .swu file.
+# Sub-make calls (deploy-*) must inherit BOARD and SWU_VERSION, otherwise
+# they re-evaluate their defaults (BOARD=kv260, SWU_VERSION=fresh timestamp)
+# and artifacts get deployed under the wrong board name / fail to find the
+# .swu file.
 export BOARD
 export SWU_VERSION
 
@@ -68,14 +68,10 @@ DEPLOY_DIR       ?= $(CURDIR)/deploy
 # wic/ etc. content used by the swu target lives.
 ZION_LAYER_DIR   := meta/meta-zion
 
-# Single timestamp for the entire invocation — keeps all artifacts in the same
-# snapshot directory and is passed explicitly to recursive make calls.
+# Build timestamp stamped into manifest.txt and the generated flash/install
+# scripts. Deploy folders are NOT timestamped — every deploy wipes and
+# replaces deploy/<type>/<board>/ so exactly one copy is kept on disk.
 DEPLOY_TS        := $(shell date +%Y%m%d_%H%M%S)
-
-# How many snapshots to keep per artifact type (images/sdk/esdk/swu) and board.
-# 1 = only the newest copy; every deploy prunes the previous ones automatically.
-# Override to retain history, e.g.:  make image kv260 DEPLOY_KEEP=3
-DEPLOY_KEEP      ?= 1
 
 # SDK / eSDK install paths inside the Docker containers
 SDK_INSTALL_DIR  ?= /opt/poky/sdk
@@ -112,8 +108,8 @@ _ESDK_IMAGE_TAG  := $(lastword  $(subst :, ,$(ESDK_IMAGE)))
         kas-image image ensure-image \
         sdk-image ensure-sdk-image \
         esdk-image ensure-esdk-image \
-        kas-container-script shell flash sdk esdk swu \
-        deploy-images deploy-sdk deploy-esdk deploy-swu prune-deploy \
+        kas-container-script shell test-wiring flash sdk esdk swu \
+        deploy-images deploy-sdk deploy-esdk deploy-swu \
         clean clean-build clean-docker clean-all \
         check-board lint test validate \
         completion help
@@ -159,7 +155,7 @@ image: build ## Build Yocto SD card image for BOARD  (alias for build)
 ##   Step 2  run bitbake populate_sdk inside the container
 ##   Step 3  locate and stage the SDK installer into docker/sdk/sdk.sh
 ##   Step 4  build the SDK Docker image
-##   Step 5  deploy SDK artifacts to deploy/sdk/BOARD_TS/
+##   Step 5  deploy SDK artifacts to deploy/sdk/
 sdk-image: ensure-image kas-container-script ## Full chain: SDK build → stage → docker build → deploy
 	@echo ""
 	@echo "======================================================================"
@@ -185,7 +181,7 @@ sdk-image: ensure-image kas-container-script ## Full chain: SDK build → stage 
 	    SDK_INSTALL_DIR=$(SDK_INSTALL_DIR)
 	@echo ""
 	@echo "[4/4] Deploying SDK artifacts to deploy/sdk/ ..."
-	@$(MAKE) --no-print-directory deploy-sdk DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-sdk
 	@echo ""
 	@echo "======================================================================"
 	@echo " sdk-image: complete → $(SDK_IMAGE)"
@@ -197,7 +193,7 @@ sdk-image: ensure-image kas-container-script ## Full chain: SDK build → stage 
 ##   Step 2  run bitbake populate_sdk_ext inside the container
 ##   Step 3  locate and stage the eSDK installer into docker/esdk/esdk.sh
 ##   Step 4  build the eSDK Docker image
-##   Step 5  deploy eSDK artifacts to deploy/esdk/BOARD_TS/
+##   Step 5  deploy eSDK artifacts to deploy/esdk/
 esdk-image: ensure-image kas-container-script ## Full chain: eSDK build → stage → docker build → deploy
 	@echo ""
 	@echo "======================================================================"
@@ -223,7 +219,7 @@ esdk-image: ensure-image kas-container-script ## Full chain: eSDK build → stag
 	    ESDK_INSTALL_DIR=$(ESDK_INSTALL_DIR)
 	@echo ""
 	@echo "[4/4] Deploying eSDK artifacts to deploy/esdk/ ..."
-	@$(MAKE) --no-print-directory deploy-esdk DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-esdk
 	@echo ""
 	@echo "======================================================================"
 	@echo " esdk-image: complete → $(ESDK_IMAGE)"
@@ -250,31 +246,34 @@ ensure-esdk-image: ## Run esdk-image chain only when image is absent
 build: ensure-image kas-container-script ## Build Yocto SD card image for BOARD
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) build $(KAS_CONFIG)
-	@$(MAKE) --no-print-directory deploy-images DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-images
 
 ## Clean sstate for the image recipe then rebuild (use after adding packages)
 rebuild-image: ensure-image kas-container-script ## cleansstate image recipe, then rebuild
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c cleansstate $(IMAGE_TARGET)"
 	$(KAS_RUN) build $(KAS_CONFIG)
-	@$(MAKE) --no-print-directory deploy-images DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-images
 
 ## Interactive shell inside the KAS build container
 shell: ensure-image kas-container-script ## Interactive kas shell in the build container
 	$(KAS_RUN) shell $(KAS_CONFIG)
+
+test-wiring: ensure-image kas-container-script ## Bitbake-build just WebConfig + Instrumentation (skips the full image)
+	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake webconfigd webconfig-static webconfig-schemas webconfig-manifest instrumentation"
 
 ## Build the cross-toolchain SDK installer and deploy it (no Docker image)
 ## Use 'make sdk-image' to also build the SDK Docker image.
 sdk: ensure-image kas-container-script ## Build cross-toolchain SDK → deploy/sdk/
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk $(IMAGE_TARGET)"
-	@$(MAKE) --no-print-directory deploy-sdk DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-sdk
 
 ## Build the extensible SDK installer and deploy it (no Docker image)
 ## Use 'make esdk-image' to also build the eSDK Docker image.
 esdk: ensure-image kas-container-script ## Build extensible SDK     → deploy/esdk/
 	@mkdir -p $(BUILD_DIR) $(DL_DIR) $(SSTATE_DIR)
 	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake -c populate_sdk_ext $(IMAGE_TARGET)"
-	@$(MAKE) --no-print-directory deploy-esdk DEPLOY_TS=$(DEPLOY_TS)
+	@$(MAKE) --no-print-directory deploy-esdk
 
 ## Build a .swu OTA update package from the latest rootfs.ext4 image
 ## Usage: make swu   or   make swu SWU_VERSION=1.2.3
@@ -334,7 +333,7 @@ swu: build ## Build .swu OTA package  [SWU_VERSION=YYYYMMDDHHMM]
 	# in the parent make, and a sub-make would re-evaluate it (a minute
 	# rollover between packaging and deploy would make the .swu filename
 	# not match).
-	@$(MAKE) --no-print-directory deploy-swu DEPLOY_TS=$(DEPLOY_TS) SWU_VERSION=$(SWU_VERSION)
+	@$(MAKE) --no-print-directory deploy-swu SWU_VERSION=$(SWU_VERSION)
 
 
 ## Flash to SD card.  Usage: make flash kv260 DEVICE=/dev/sdX
@@ -355,12 +354,13 @@ endif
 # Artifact deployment (called automatically; can also be invoked manually)
 # -----------------------------------------------------------------------------
 
-## Copy .wic SD card images → deploy/images/BOARD_TS/
-deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcard.sh + manifest)
+## Copy .wic SD card images → deploy/images/BOARD/
+deploy-images: ## Copy .wic artifacts → deploy/images/BOARD/ (+ flash-sdcard.sh + manifest)
 	@src="$(BUILD_DIR)/tmp/deploy/images/$(MACHINE)"; \
-	 out="$(DEPLOY_DIR)/images/$(BOARD)_$(DEPLOY_TS)"; \
+	 out="$(DEPLOY_DIR)/images/$(BOARD)"; \
 	 test -d "$$src" || { echo "ERROR: No image artifacts at $$src"; exit 1; }; \
-	 echo "Deploying SD card images → $$out ..."; \
+	 echo "Deploying SD card images → $$out (replacing previous copy) ..."; \
+	 rm -rf "$$out"; \
 	 mkdir -p "$$out"; \
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     \( -name "*.wic.bz2" -o -name "*.wic.bmap" -o -name "BOOT*.bin" -o -name "boot.bin" \) \
@@ -376,57 +376,44 @@ deploy-images: ## Copy .wic artifacts → deploy/images/BOARD_TS/ (+ flash-sdcar
 	   [ -n "$$_kv" ] && printf 'kernel=%s\n' "$$(basename "$$_kv")"; \
 	 } > "$$out/manifest.txt"; \
 	 echo "  Done: $$out (manifest.txt written)"; \
-	 echo "  Flash: cd $$(basename "$$out") && sudo ./flash-sdcard.sh /dev/sdX"; \
-	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=images DEPLOY_TS=$(DEPLOY_TS)
+	 echo "  Flash: cd $$out && sudo ./flash-sdcard.sh /dev/sdX"
 
-## Copy cross-toolchain SDK installer → deploy/sdk/BOARD_TS/
-deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD_TS/
+## Copy cross-toolchain SDK installer → deploy/sdk/BOARD/
+deploy-sdk: ## Copy SDK installer   → deploy/sdk/BOARD/
 	@src="$(BUILD_DIR)/tmp/deploy/sdk"; \
-	 out="$(DEPLOY_DIR)/sdk/$(BOARD)_$(DEPLOY_TS)"; \
+	 out="$(DEPLOY_DIR)/sdk/$(BOARD)"; \
 	 test -d "$$src" || { echo "ERROR: No SDK artifacts at $$src"; exit 1; }; \
-	 echo "Deploying SDK → $$out ..."; \
+	 echo "Deploying SDK → $$out (replacing previous copy) ..."; \
+	 rm -rf "$$out"; \
 	 mkdir -p "$$out"; \
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     -name '*.sh' ! -name '*-ext-*' \
 	     -exec cp -L {} "$$out/" \;; \
-	 echo "  Done: $$out"; \
-	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=sdk DEPLOY_TS=$(DEPLOY_TS)
+	 echo "  Done: $$out"
 
-## Copy extensible SDK installer → deploy/esdk/BOARD_TS/
-deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD_TS/
+## Copy extensible SDK installer → deploy/esdk/BOARD/
+deploy-esdk: ## Copy eSDK installer  → deploy/esdk/BOARD/
 	@src="$(BUILD_DIR)/tmp/deploy/sdk"; \
-	 out="$(DEPLOY_DIR)/esdk/$(BOARD)_$(DEPLOY_TS)"; \
+	 out="$(DEPLOY_DIR)/esdk/$(BOARD)"; \
 	 test -d "$$src" || { echo "ERROR: No eSDK artifacts at $$src"; exit 1; }; \
-	 echo "Deploying eSDK → $$out ..."; \
+	 echo "Deploying eSDK → $$out (replacing previous copy) ..."; \
+	 rm -rf "$$out"; \
 	 mkdir -p "$$out"; \
 	 find "$$src" -maxdepth 1 \( -type f -o -type l \) \
 	     -name '*-ext-*.sh' \
 	     -exec cp -L {} "$$out/" \;; \
-	 echo "  Done: $$out"; \
-	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=esdk DEPLOY_TS=$(DEPLOY_TS)
+	 echo "  Done: $$out"
 
-## Copy .swu OTA package → deploy/swu/BOARD_TS/
-deploy-swu: ## Copy .swu package    → deploy/swu/BOARD_TS/ (+ install-ota.sh)
-	@out="$(DEPLOY_DIR)/swu/$(BOARD)_$(DEPLOY_TS)"; \
-	 echo "Deploying SWU → $$out ..."; \
+## Copy .swu OTA package → deploy/swu/BOARD/
+deploy-swu: ## Copy .swu package    → deploy/swu/BOARD/ (+ install-ota.sh)
+	@out="$(DEPLOY_DIR)/swu/$(BOARD)"; \
+	 echo "Deploying SWU → $$out (replacing previous copy) ..."; \
+	 rm -rf "$$out"; \
 	 mkdir -p "$$out"; \
 	 cp -L "$(BUILD_DIR)/$(BOARD)-$(SWU_VERSION).swu" "$$out/"; \
 	 bash "$(CURDIR)/scripts/generate-install-ota.sh" "$$out" "$(BOARD)" "$(SWU_VERSION)"; \
 	 echo "  Done: $$out"; \
-	 echo "  Install: cd $$(basename "$$out") && ./install-ota.sh --serve  (or --device <ip> / --copy <dir>)"; \
-	 $(MAKE) --no-print-directory prune-deploy PRUNE_TYPE=swu DEPLOY_TS=$(DEPLOY_TS)
-
-## Remove old deploy snapshots, keeping only the newest DEPLOY_KEEP copies
-## per artifact type and board (called automatically after each deploy)
-prune-deploy:
-	@test -n "$(PRUNE_TYPE)" || { echo "ERROR: PRUNE_TYPE not set (images|sdk|esdk|swu)"; exit 1; }; \
-	 dir="$(DEPLOY_DIR)/$(PRUNE_TYPE)"; \
-	 test -d "$$dir" || exit 0; \
-	 old=$$(ls -1d "$$dir"/$(BOARD)_* 2>/dev/null | sort -r | tail -n +$$(($(DEPLOY_KEEP) + 1))); \
-	 for d in $$old; do \
-	     echo "  Pruning old $(PRUNE_TYPE) snapshot: $$d"; \
-	     rm -rf "$$d"; \
-	 done
+	 echo "  Install: cd $$out && ./install-ota.sh --serve  (or --device <ip> / --copy <dir>)"
 
 # -----------------------------------------------------------------------------
 # Clean targets
