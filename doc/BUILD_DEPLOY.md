@@ -48,7 +48,7 @@ board and serial/network access.
 ```bash
 make swu SWU_VERSION=1.2.3
 ```
-Images are copied to `deploy/images/kr260_<timestamp>/` together with
+Images are copied to `deploy/images/kr260/` together with
 `BOOT-k26-smk-kr-sdt.bin` (QSPI boot firmware for `xmutil updateboot`) and a
 `manifest.txt` (board, machine, image, git + meta-zion SHAs, kernel
 version); SDK installers to `deploy/sdk/`; eSDK installers to

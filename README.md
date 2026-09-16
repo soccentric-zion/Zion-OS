@@ -10,7 +10,7 @@ installers, and a signed `.swu` OTA package.
 
 **Build status:** the complete image build is verified —
 `make image kv260` / `make image kr260` produce flashable images
-(`deploy/images/<board>_<timestamp>/`, with `.wic.bz2`, `.wic.bmap`, a
+(`deploy/images/<board>/`, with `.wic.bz2`, `.wic.bmap`, a
 self-contained flash script and a build manifest), `make swu` produces the
 signed OTA package, and `make validate` checks the OTA/signing/security
 chain in CI (`.github/workflows/ci.yml`). Boot/OTA behavior on real silicon
@@ -169,14 +169,14 @@ make kas-image
 make image
 
 # Build artifacts land in:
-#   deploy/images/kv260_<timestamp>/  ← .wic.bz2 + .wic.bmap + flash-sdcard.sh
+#   deploy/images/kv260/  ← .wic.bz2 + .wic.bmap + flash-sdcard.sh
 ```
 
 Each deploy folder includes an auto-generated, self-contained SD flasher —
 use it on any host that has an SD card, no repo needed:
 
 ```bash
-cd deploy/images/<BOARD>_<TIMESTAMP> && sudo ./flash-sdcard.sh /dev/sdX
+cd deploy/images/<BOARD> && sudo ./flash-sdcard.sh /dev/sdX
 ```
 
 Tab completion (optional):
@@ -242,7 +242,7 @@ make clean-docker          Remove kas/sdk/esdk Docker images
 ```bash
 make swu
 # → build/<BOARD>-<VERSION>.swu
-# → deploy/swu/<BOARD>_<TIMESTAMP>/<BOARD>-<VERSION>.swu
+# → deploy/swu/<BOARD>/<BOARD>-<VERSION>.swu
 ```
 
 The `.swu` contains:
@@ -256,7 +256,7 @@ The `.swu` contains:
 The `.swu` deploy directory also ships an auto-generated `install-ota.sh` helper:
 
 ```bash
-cd deploy/swu/<BOARD>_<TIMESTAMP>
+cd deploy/swu/<BOARD>
 ./install-ota.sh --serve          # host the .swu over HTTP (web UI or curl)
 ./install-ota.sh --device <ip>    # scp to a running device + install via SSH
 ./install-ota.sh --copy <dir>     # copy onto a mounted SD/USB stick
@@ -311,7 +311,7 @@ Alternatively, every image deploy folder contains a standalone flasher that
 works without this repo (bmaptool when available, dd fallback):
 
 ```bash
-cd deploy/images/kr260_<timestamp>
+cd deploy/images/kr260
 sudo ./flash-sdcard.sh            # lists candidate devices
 sudo ./flash-sdcard.sh /dev/sdX   # confirm, then flash
 ```
@@ -354,7 +354,7 @@ Vitis/PetaLinux. Rootfs A/B and the data partition remain on eMMC or SD.
 
 1. Connect JTAG via the KV260 JTAG/USB port and use `xsct`/`program_flash`
    to reprogram the QSPI boot firmware (Image A) with a known-good BOOT.BIN
-   (deployed to `deploy/images/<board>_<ts>/BOOT-k26-smk-kv-sdt.bin`).
+   (deployed to `deploy/images/<board>/BOOT-k26-smk-kv-sdt.bin`).
 2. If the QSPI boot firmware still runs but the SD contents are bad:
    re-flash the SD card from any host with the per-deploy
    `flash-sdcard.sh`, or boot U-Boot over JTAG and `tftpboot` a rescue
@@ -373,7 +373,7 @@ Vitis/PetaLinux. Rootfs A/B and the data partition remain on eMMC or SD.
 ```bash
 # Build cross-toolchain SDK (no Docker image):
 make sdk kv260
-# → deploy/sdk/kv260_<timestamp>/*.sh
+# → deploy/sdk/kv260/*.sh
 
 # Build SDK + Docker image (for CI cross-compilation containers):
 make sdk-image

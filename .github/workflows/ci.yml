@@ -68,7 +68,7 @@ jobs:
         with:
           name: zion-${{ matrix.board }}-${{ github.sha }}
           path: |
-            deploy/images/${{ matrix.board }}_*
-            deploy/swu/${{ matrix.board }}_*
+            deploy/images/${{ matrix.board }}/
+            deploy/swu/${{ matrix.board }}/
           if-no-files-found: error
           retention-days: 14
