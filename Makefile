@@ -90,7 +90,18 @@ KAS_ENV = \
 	SSTATE_DIR=$(SSTATE_DIR) \
 	KAS_SSH_DIR=$(HOME)/.ssh
 
+# Containers on the default bridge network copy the host's /etc/resolv.conf.
+# On hosts whose resolver is Tailscale MagicDNS (nameserver 100.100.100.100)
+# that resolver is unreachable from the bridge, so every lookup inside the
+# container fails ("Temporary failure in name resolution") and kas cannot
+# git-clone any repo. Point the container at a public resolver to work
+# around it; set KAS_DNS= to disable the override.
+KAS_DNS ?= 8.8.8.8
+ifneq ($(strip $(KAS_DNS)),)
+KAS_RUN = $(KAS_ENV) $(KAS_CONTAINER) --docker-args "--dns $(KAS_DNS)"
+else
 KAS_RUN = $(KAS_ENV) $(KAS_CONTAINER)
+endif
 
 # --- Internal helpers --------------------------------------------------------
 # Split IMAGE_NAME:TAG once so every sub-make call is consistent.
