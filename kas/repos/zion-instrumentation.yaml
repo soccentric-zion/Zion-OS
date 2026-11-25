@@ -15,7 +15,7 @@ repos:
   # Zion-Instrumentation/yocto's layer.conf and instrumentation.bb for
   # the parts still needing board-specific work.
   zion-instrumentation:
-    url: git@github.com:soccentric-zion/Zion-Instrumentation.git
+    url: https://github.com/soccentric-zion/Zion-Instrumentation.git
     branch: develop
     path: meta/zion-instrumentation
     layers:

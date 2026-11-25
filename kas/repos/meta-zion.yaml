@@ -3,7 +3,7 @@ header:
 
 repos:
   meta-zion:
-    url: git@github.com:soccentric-zion/meta-zion.git
+    url: https://github.com/soccentric-zion/meta-zion.git
     branch: develop
     # Pinned so kas materializes exactly this state instead of force-
     # resetting the local branch to origin/develop on every run (which
