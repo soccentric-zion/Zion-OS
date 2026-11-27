@@ -45,8 +45,7 @@ local_conf_header:
     DL_DIR     ?= "${TOPDIR}/../downloads"
     SSTATE_DIR ?= "${TOPDIR}/../sstate-cache"
 
-    # SWUpdate: enable built-in Mongoose web server and progress IPC
-    PACKAGECONFIG:append:pn-swupdate = " webserver"
+    # SWUpdate: web server/UI intentionally not enabled
 
     # Reproducible builds: pin all timestamps to a fixed epoch so images,
     # SDKs and packages built on different hosts are bit-identical.
