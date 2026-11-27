@@ -270,7 +270,7 @@ shell: ensure-image kas-container-script ## Interactive kas shell in the build c
 	$(KAS_RUN) shell $(KAS_CONFIG)
 
 test-wiring: ensure-image kas-container-script ## Bitbake-build just WebConfig + Instrumentation (skips the full image)
-	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake webconfigd webconfig-static webconfig-schemas webconfig-manifest instrumentation"
+	$(KAS_RUN) shell $(KAS_CONFIG) -c "bitbake instrumentation"
 
 ## Build the cross-toolchain SDK installer and deploy it (no Docker image)
 ## Use 'make sdk-image' to also build the SDK Docker image.
